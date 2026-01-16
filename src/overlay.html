@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Overlay</title>
+    <!-- Load scripts from CDN like oto_desktop does -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display-lipsyncpatch@0.5.0-ls-8/dist/cubism4.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+            cursor: grab;
+        }
+
+        body:active {
+            cursor: grabbing;
+        }
+
+        #live2dCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: none;
+        }
+
+        #hitboxCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1500;
+            display: none;
+        }
+
+        .hitbox-instructions {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 12px;
+            border-radius: 8px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            z-index: 1600;
+            display: none;
+        }
+
+        .control-bar {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            -webkit-app-region: no-drag;
+        }
+
+        body:hover .control-bar {
+            opacity: 1;
+        }
+
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        .control-btn.active {
+            background: rgba(76, 175, 80, 0.8);
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 10px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body:hover .status-indicator {
+            opacity: 1;
+        }
+
+        .status-indicator.listening {
+            background: rgba(76, 175, 80, 0.8);
+        }
+
+        .textbox-container {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 300px;
+            display: none;
+            z-index: 2500;
+            -webkit-app-region: no-drag;
+        }
+
+        .textbox-container.visible {
+            display: block;
+            animation: slideUp 0.2s ease-out;
+        }
+
+        .textbox-container input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.75);
+            color: white;
+            font-size: 14px;
+            outline: none;
+            backdrop-filter: blur(10px);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .textbox-container input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .textbox-container input:focus {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: none;
+        }
+
+        .textbox-container.level-2 input {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.7), rgba(75, 0, 130, 0.7));
+            color: white;
+        }
+
+        .textbox-container.level-2 input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .textbox-container.with-screenshot input:focus {
+            border: 1px solid rgba(255, 160, 80, 0.5);
+            animation: breatheGlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes breatheGlow {
+            0%, 100% {
+                box-shadow:
+                    0 0 6px rgba(255, 140, 0, 0.35),
+                    0 0 12px rgba(255, 100, 0, 0.2);
+            }
+            50% {
+                box-shadow:
+                    0 0 10px rgba(255, 160, 50, 0.5),
+                    0 0 20px rgba(255, 120, 0, 0.3),
+                    0 0 30px rgba(255, 100, 0, 0.15);
+            }
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* Response display */
+        .response-container {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 350px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1002;
+            -webkit-app-region: no-drag;
+        }
+
+        .response-container.visible {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .response-text {
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            backdrop-filter: blur(10px);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .response-text.loading {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .response-text.error {
+            border-left: 3px solid #f87171;
+        }
+
+        /* Miku comment styling */
+        .miku-comment {
+            color: #39c5bb;
+            font-style: italic;
+            font-size: 13px;
+            margin: 10px 0 12px 0;
+            padding-left: 12px;
+            border-left: 2px solid #39c5bb;
+        }
+
+        /* Markdown styling */
+        .response-text h2, .response-text h3, .response-text h4 {
+            margin: 12px 0 8px 0;
+            font-weight: 600;
+        }
+        .response-text h2 { font-size: 16px; }
+        .response-text h3 { font-size: 15px; }
+        .response-text h4 { font-size: 14px; }
+
+        .response-text p {
+            margin: 8px 0;
+        }
+
+        .response-text code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        .response-text pre {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .response-text pre code {
+            background: transparent;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .response-text ul, .response-text ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .response-text li {
+            margin: 4px 0;
+        }
+
+        .response-text strong {
+            font-weight: 600;
+        }
+
+        .response-text em {
+            font-style: italic;
+        }
+
+        /* Chat history modal */
+        .history-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            z-index: 2000;
+            -webkit-app-region: no-drag;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+
+        .history-modal.visible {
+            transform: translateY(0);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            font-size: 16px;
+        }
+
+        .history-header button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .level-badge.level-0 {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .level-badge.level-1 {
+            background: rgba(57, 197, 187, 0.25);
+            color: #39c5bb;
+        }
+
+        .level-badge.level-2 {
+            background: rgba(138, 43, 226, 0.25);
+            color: #dda0dd;
+        }
+
+        .history-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .history-message {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+            transition: opacity 0.3s ease, max-height 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+            overflow: hidden;
+        }
+
+        .history-message.filtered {
+            opacity: 0;
+            max-height: 0;
+            margin-bottom: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            pointer-events: none;
+        }
+
+        .history-message.user {
+            background: rgba(74, 158, 255, 0.2);
+            color: #a8d4ff;
+            margin-left: 20%;
+        }
+
+        .history-message.assistant {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin-right: 20%;
+        }
+
+        .history-message.miku {
+            background: rgba(57, 197, 187, 0.15);
+            color: #39c5bb;
+            font-style: italic;
+            margin-right: 20%;
+            border-left: 3px solid #39c5bb;
+        }
+
+        .history-message.focused,
+        .history-message p.focused,
+        .history-message h2.focused,
+        .history-message h3.focused,
+        .history-message h4.focused,
+        .history-message pre.focused,
+        .history-message ul.focused,
+        .history-message ol.focused {
+            outline: 2px solid rgba(255, 255, 255, 0.5);
+            outline-offset: 2px;
+        }
+
+        /* Markdown in history messages */
+        .history-message code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        .history-message pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .history-message pre code {
+            background: transparent;
+            padding: 0;
+            font-size: 12px;
+        }
+
+        .history-message h2, .history-message h3, .history-message h4 {
+            margin: 8px 0 6px 0;
+            font-weight: 600;
+        }
+
+        .history-message ul, .history-message ol {
+            margin: 6px 0;
+            padding-left: 18px;
+        }
+
+        .history-message li {
+            margin: 3px 0;
+        }
+
+        .history-empty {
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            padding: 40px;
+        }
+
+        /* Level indicator */
+        .level-indicator {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 8px;
+            z-index: 2600;
+            font-family: monospace;
+        }
+
+        .level-indicator.visible {
+            display: flex;
+        }
+
+        .level-indicator .dash {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .level-indicator .dash.active {
+            color: white;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+
+        /* Deep thought messages */
+        .history-message.deep-thought {
+            background: linear-gradient(135deg, rgba(138, 43, 226, 0.2), rgba(75, 0, 130, 0.2));
+            color: #dda0dd;
+            border-left: 3px solid #9370db;
+            margin: 0 10%;
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="hitboxCanvas"></canvas>
+    <canvas id="live2dCanvas"></canvas>
+    <div class="hitbox-instructions" id="hitboxInstructions">
+        Click to add points. Click first point to close. ESC to cancel, ENTER to save.
+    </div>
+
+    <div class="status-indicator" id="statusIndicator"></div>
+
+    <div class="response-container" id="responseContainer">
+        <div class="response-text" id="responseText"></div>
+    </div>
+
+    <div class="textbox-container" id="textboxContainer">
+        <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off" />
+    </div>
+
+    <div class="level-indicator" id="levelIndicator">
+        <span class="dash active" data-level="0">─</span>
+        <span class="dash" data-level="1">─</span>
+        <span class="dash" data-level="2">─</span>
+    </div>
+
+    <div class="control-bar">
+        <button class="control-btn" id="newChatBtn" title="New Chat">&#43;</button>
+        <button class="control-btn" id="historyBtn" title="Chat History">&#x2191;</button>
+        <button class="control-btn" id="settingsBtn" title="Settings">&#x2699;</button>
+        <button class="control-btn" id="closeBtn" title="Close">&#x2715;</button>
+    </div>
+
+    <div class="history-modal" id="historyModal">
+        <div class="history-header">
+            <span id="levelBadge" class="level-badge level-0">All</span>
+            <button id="closeHistoryBtn">&#x2715;</button>
+        </div>
+        <div class="history-content" id="historyContent"></div>
+    </div>
+
+    <script type="module">
+        const { Live2DModel } = PIXI.live2d;
+        const { invoke } = window.__TAURI__.core;
+        const { listen } = window.__TAURI__.event;
+        const { getCurrentWindow } = window.__TAURI__.window;
+        const { convertFileSrc } = window.__TAURI__.core;
+
+        let currentBasePath = null;
+        // Global cache buster - updated on each model reload to force fresh texture loading
+        window.textureCacheBuster = Date.now();
+
+        // ============ Constants ============
+        const DEEP_RESEARCH_COOLDOWN_SECONDS = 6 * 60 * 60; // 6 hours
+        const MIN_ASSISTANT_TEXT_LENGTH = 80; // Minimum chars for navigable assistant blocks
+        const DOUBLE_TAP_THRESHOLD_MS = 500; // Double-tap detection window
+        const LEVEL_LABELS = ['All', 'Character', 'Deep Think'];
+
+        // ============ Application State ============
+        /**
+         * Centralized application state for the overlay UI
+         * @type {Object}
+         */
+        const AppState = {
+            /** Current filter level (0=All, 1=Character, 2=Deep Think) */
+            historyFilterLevel: 0,
+            /** Current focused element index in history (-1 = none) */
+            historyFocusIndex: -1,
+            /** Whether to include screenshot with messages */
+            includeScreenshot: localStorage.getItem('screenshotEnabled') !== 'false',
+            /** Remaining cooldown seconds for deep research */
+            cooldownRemainingSeconds: 0,
+            /** Cooldown timer interval reference */
+            cooldownTimer: null,
+            /** Timestamp of last escape key press */
+            lastEscapeTime: 0
+        };
+
+        // ============ Asset URL Resolution ============
+        function resolveAssetUrl(url) {
+            if (!currentBasePath || typeof url !== 'string') return url;
+
+            // Check if it's an asset URL that needs resolution
+            const assetPrefixes = ['asset://localhost/', 'http://asset.localhost/'];
+            for (const prefix of assetPrefixes) {
+                if (url.startsWith(prefix)) {
+                    const pathname = url.replace(prefix, '');
+                    if (!pathname.startsWith('%2F')) {
+                        const decoded = decodeURIComponent(pathname);
+                        // Add cache-busting to prevent texture caching
+                        const resolved = convertFileSrc(`${currentBasePath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                        console.log('[AssetResolve] Resolved:', url.substring(0, 50), '-> cachebuster:', window.textureCacheBuster);
+                        return resolved;
+                    }
+                    return url;
+                }
+            }
+
+            // Handle bare asset:// URLs (relative paths from Live2D SDK)
+            if (url.startsWith('asset://') && !url.startsWith('asset://localhost')) {
+                const pathname = url.replace('asset://', '');
+                const decoded = decodeURIComponent(pathname);
+                const parentPath = currentBasePath.substring(0, currentBasePath.lastIndexOf('/'));
+                // Add cache-busting to prevent texture caching
+                const resolved = convertFileSrc(`${parentPath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                console.log('[AssetResolve] Resolved bare asset:', decoded, '-> cachebuster:', window.textureCacheBuster);
+                return resolved;
+            }
+
+            return url;
+        }
+
+        // Patch XHR
+        const originalXHROpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...args) {
+            return originalXHROpen.call(this, method, resolveAssetUrl(url), ...args);
+        };
+
+        // Patch fetch
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+            return originalFetch.call(this, typeof input === 'string' ? resolveAssetUrl(input) : input, init);
+        };
+
+        // Patch Image.src
+        const originalImageSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+        Object.defineProperty(HTMLImageElement.prototype, 'src', {
+            set: function(url) {
+                return originalImageSrcDescriptor.set.call(this, resolveAssetUrl(url));
+            },
+            get: originalImageSrcDescriptor.get,
+            configurable: true,
+            enumerable: true
+        });
+
+        // ============ Live2D Overlay Controller ============
+        class Live2DOverlay {
+            constructor() {
+                this.app = null;
+                this.model = null;
+                this.isInitialized = false;
+                this.bustMode = true;
+            }
+
+            initApp() {
+                if (this.app) return;
+
+                const canvas = document.getElementById('live2dCanvas');
+                this.app = new PIXI.Application({
+                    view: canvas,
+                    resizeTo: window,
+                    backgroundAlpha: 0,
+                    resolution: window.devicePixelRatio || 1,
+                    antialias: true,
+                    autoStart: false,
+                });
+
+                setInterval(() => {
+                    if (this.app && this.app.ticker) {
+                        this.app.ticker.update();
+                    }
+                }, 16);
+
+                this.isInitialized = true;
+            }
+
+            async loadModel(modelPath, modelFileName) {
+                console.log('[Live2D] loadModel called - starting reload process');
+
+                this.initApp();
+
+                // Update cache buster to force fresh texture loading
+                window.textureCacheBuster = Date.now();
+                console.log('[Live2D] Cache buster updated to:', window.textureCacheBuster);
+
+                // Destroy existing model first
+                if (this.model) {
+                    console.log('[Live2D] Destroying existing model');
+                    this.app.stage.removeChild(this.model);
+                    this.model.destroy({ children: true, texture: true, baseTexture: true });
+                    this.model = null;
+                }
+
+                // Clear PIXI texture cache to force fresh loading
+                console.log('[Live2D] Clearing PIXI texture caches');
+                if (PIXI.utils && PIXI.utils.TextureCache) {
+                    for (const key in PIXI.utils.TextureCache) {
+                        console.log('[Live2D] Removing cached texture:', key);
+                        delete PIXI.utils.TextureCache[key];
+                    }
+                }
+                if (PIXI.utils && PIXI.utils.BaseTextureCache) {
+                    for (const key in PIXI.utils.BaseTextureCache) {
+                        console.log('[Live2D] Removing cached base texture:', key);
+                        PIXI.utils.BaseTextureCache[key].destroy();
+                        delete PIXI.utils.BaseTextureCache[key];
+                    }
+                }
+
+                try {
+                    let normalizedPath = modelPath.replace(/\\/g, '/');
+                    if (/^[A-Z]:\//.test(normalizedPath) && !normalizedPath.startsWith('//?/')) {
+                        normalizedPath = '//?/' + normalizedPath;
+                    }
+
+                    currentBasePath = normalizedPath;
+                    console.log('[Live2D] Current base path:', currentBasePath);
+
+                    const fullPath = `${normalizedPath}/${modelFileName}`;
+                    // Add cache-busting to model URL to prevent caching
+                    const modelUrl = convertFileSrc(fullPath) + '?t=' + window.textureCacheBuster;
+
+                    console.log('[Live2D] Loading model from:', modelUrl);
+
+                    this.model = await Live2DModel.from(modelUrl, { autoInteract: false });
+                    console.log('[Live2D] Model.from() completed');
+
+                    this.app.stage.addChild(this.model);
+                    this.resizeModel();
+
+                    window.addEventListener('resize', () => this.resizeModel());
+
+                    console.log('[Live2D] Model loaded successfully!');
+                    return { width: this.model.width, height: this.model.height };
+                } catch (error) {
+                    console.error('[Live2D] Load failed:', error);
+                    currentBasePath = null;
+                    throw error;
+                }
+            }
+
+            resizeModel() {
+                if (!this.model) return;
+
+                const { innerWidth, innerHeight } = window;
+
+                if (this.bustMode) {
+                    const baseScaleX = innerWidth / this.model.width;
+                    const baseScaleY = innerHeight / this.model.height;
+                    const baseScale = Math.min(baseScaleX, baseScaleY);
+                    const bustScale = baseScale * 2.0;
+
+                    this.model.scale.set(bustScale);
+                    // Center in window (window is positioned in bottom right of screen)
+                    this.model.x = innerWidth / 2;
+                    this.model.y = innerHeight * 1.02;
+                    this.model.anchor.set(0.5, 0.5);
+                } else {
+                    const scaleX = innerWidth / this.model.width;
+                    const scaleY = innerHeight / this.model.height;
+                    const scale = Math.min(scaleX, scaleY) * 0.9;
+
+                    this.model.scale.set(scale);
+                    // Center in window
+                    this.model.x = innerWidth / 2;
+                    this.model.y = innerHeight;
+                    this.model.anchor.set(0.5, 0.5);
+                }
+            }
+
+            getCoreModel() {
+                return this.model?.internalModel?.coreModel;
+            }
+
+            setParameter(paramId, value) {
+                const coreModel = this.getCoreModel();
+                if (coreModel) {
+                    coreModel.setParameterValueById(paramId, Number(value));
+                }
+            }
+        }
+
+        const live2dOverlay = new Live2DOverlay();
+        window.live2dOverlay = live2dOverlay;
+
+        // ============ Auto-load model on window open ============
+        let modelLoadInProgress = false;
+
+        async function autoLoadModel() {
+            if (modelLoadInProgress) {
+                console.log('[Overlay] Model load already in progress, skipping');
+                return;
+            }
+            modelLoadInProgress = true;
+
+            try {
+                const modelsPath = await invoke('get_paths');
+                const modelPath = `${modelsPath}/Hiyori`;
+                const modelFileName = 'Hiyori.model3.json';
+
+                console.log('[Overlay] Auto-loading model:', modelPath);
+                await live2dOverlay.loadModel(modelPath, modelFileName);
+
+                // Start device listening for head tracking
+                await invoke('start_device_listening');
+            } catch (error) {
+                console.error('[Overlay] Failed to auto-load model:', error);
+                modelLoadInProgress = false;
+            }
+        }
+
+        // ============ Tauri Event Handlers ============
+        listen('device-changed', async (event) => {
+            const { kind, value } = event.payload;
+
+            if (kind === 'MouseMove') {
+                const { x, y } = value;
+                const screenWidth = window.screen.width;
+                const screenHeight = window.screen.height;
+
+                // Head tracking
+                const angleX = ((x / screenWidth) - 0.5) * 60;
+                const angleY = ((y / screenHeight) - 0.5) * -60;
+
+                live2dOverlay.setParameter('ParamAngleX', angleX);
+                live2dOverlay.setParameter('ParamAngleY', angleY);
+                live2dOverlay.setParameter('ParamBodyAngleX', angleX * 0.3);
+            }
+        });
+
+        // ============ Hitbox Editor ============
+        const hitboxCanvas = document.getElementById('hitboxCanvas');
+        const hitboxCtx = hitboxCanvas.getContext('2d');
+        const hitboxInstructions = document.getElementById('hitboxInstructions');
+
+        let hitboxEditMode = false;
+        let hitboxPreviewMode = false;
+        let hitboxPoints = [];        // [{x: 0-1, y: 0-1}, ...] normalized
+        let isPolygonClosed = false;
+
+        function normalizePoint(x, y) {
+            return {
+                x: x / window.innerWidth,
+                y: y / window.innerHeight
+            };
+        }
+
+        function denormalizePoint(point) {
+            return {
+                x: point.x * window.innerWidth,
+                y: point.y * window.innerHeight
+            };
+        }
+
+        function isPointInPolygon(x, y, polygon) {
+            if (polygon.length < 3) return false;
+            const testX = x / window.innerWidth;
+            const testY = y / window.innerHeight;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                const intersect = ((yi > testY) !== (yj > testY)) &&
+                    (testX < (xj - xi) * (testY - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function resizeHitboxCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // Set display size (CSS pixels)
+            hitboxCanvas.style.width = width + 'px';
+            hitboxCanvas.style.height = height + 'px';
+
+            // Set actual canvas buffer size (device pixels)
+            hitboxCanvas.width = width * dpr;
+            hitboxCanvas.height = height * dpr;
+
+            // Scale context for retina (setting canvas.width resets transforms)
+            hitboxCtx.scale(dpr, dpr);
+        }
+
+        function renderHitboxOverlay() {
+            hitboxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+            if (hitboxPoints.length === 0) return;
+
+            // Draw filled polygon with transparency
+            hitboxCtx.fillStyle = 'rgba(76, 175, 80, 0.2)';
+            hitboxCtx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
+            hitboxCtx.lineWidth = 2;
+
+            hitboxCtx.beginPath();
+            const firstPoint = denormalizePoint(hitboxPoints[0]);
+            hitboxCtx.moveTo(firstPoint.x, firstPoint.y);
+
+            for (let i = 1; i < hitboxPoints.length; i++) {
+                const point = denormalizePoint(hitboxPoints[i]);
+                hitboxCtx.lineTo(point.x, point.y);
+            }
+
+            if (isPolygonClosed || hitboxPreviewMode) {
+                hitboxCtx.closePath();
+                hitboxCtx.fill();
+            }
+            hitboxCtx.stroke();
+
+            // Draw point handles (only in edit mode, not preview mode)
+            if (hitboxEditMode && !hitboxPreviewMode) {
+                hitboxPoints.forEach((point, index) => {
+                    const p = denormalizePoint(point);
+                    hitboxCtx.beginPath();
+                    hitboxCtx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                    hitboxCtx.fillStyle = index === 0 ? '#ff5722' : '#4CAF50';
+                    hitboxCtx.fill();
+                    hitboxCtx.strokeStyle = 'white';
+                    hitboxCtx.lineWidth = 2;
+                    hitboxCtx.stroke();
+                });
+            }
+        }
+
+        function enterHitboxEditMode() {
+            hitboxEditMode = true;
+            hitboxPreviewMode = false; // Turn off preview when entering edit mode
+            hitboxPoints = [];
+            isPolygonClosed = false;
+
+            resizeHitboxCanvas();
+            hitboxCanvas.style.display = 'block';
+            hitboxInstructions.style.display = 'block';
+            document.body.style.cursor = 'crosshair';
+
+            renderHitboxOverlay();
+        }
+
+        async function exitHitboxEditMode(save) {
+            hitboxEditMode = false;
+
+            // Hide visual immediately
+            hitboxCtx.clearRect(0, 0, hitboxCanvas.width, hitboxCanvas.height);
+            hitboxCanvas.style.display = 'none';
+            hitboxInstructions.style.display = 'none';
+            document.body.style.cursor = 'grab';
+
+            // Save hitbox points if requested (but don't activate click-through)
+            if (save && hitboxPoints.length >= 3) {
+                isPolygonClosed = true;
+                try {
+                    await invoke('save_hitbox', { points: hitboxPoints });
+                    console.log('[Hitbox] Saved', hitboxPoints.length, 'points');
+                } catch (e) {
+                    console.error('[Hitbox] Failed to save:', e);
+                }
+            }
+        }
+
+        function handleHitboxClick(event) {
+            if (!hitboxEditMode) return;
+
+            const x = event.clientX;
+            const y = event.clientY;
+
+            // Check if clicking near first point to close polygon
+            if (hitboxPoints.length >= 3) {
+                const firstPoint = denormalizePoint(hitboxPoints[0]);
+                const distance = Math.sqrt(Math.pow(x - firstPoint.x, 2) + Math.pow(y - firstPoint.y, 2));
+                if (distance < 15) {
+                    // Close polygon and exit edit mode
+                    exitHitboxEditMode(true);
+                    return;
+                }
+            }
+
+            // Add new point
+            hitboxPoints.push(normalizePoint(x, y));
+            renderHitboxOverlay();
+        }
+
+        async function loadSavedHitbox() {
+            try {
+                const data = await invoke('load_hitbox');
+                if (data && data.points && data.points.length >= 3) {
+                    hitboxPoints = data.points;
+                    isPolygonClosed = true;
+                    console.log('[Hitbox] Loaded saved hitbox with', hitboxPoints.length, 'points');
+                } else {
+                    hitboxPoints = [];
+                    isPolygonClosed = false;
+                }
+            } catch (error) {
+                console.error('[Hitbox] Failed to load:', error);
+                hitboxPoints = [];
+                isPolygonClosed = false;
+            }
+        }
+
+        // Keyboard shortcuts for hitbox editing
+        document.addEventListener('keydown', (e) => {
+            if (!hitboxEditMode) return;
+
+            if (e.key === 'Escape') {
+                exitHitboxEditMode(false);
+            } else if (e.key === 'Enter' && hitboxPoints.length >= 3) {
+                exitHitboxEditMode(true);
+            } else if ((e.key === 'Backspace' || e.key === 'Delete') && hitboxPoints.length > 0) {
+                hitboxPoints.pop();
+                renderHitboxOverlay();
+            }
+        });
+
+        // Right-click to undo last point
+        document.addEventListener('contextmenu', (e) => {
+            if (hitboxEditMode) {
+                e.preventDefault();
+                if (hitboxPoints.length > 0) {
+                    hitboxPoints.pop();
+                    renderHitboxOverlay();
+                }
+            }
+        });
+
+        // Handle window resize - rescale hitbox canvas
+        window.addEventListener('resize', () => {
+            if (hitboxEditMode || hitboxPreviewMode) {
+                resizeHitboxCanvas();
+                renderHitboxOverlay();
+            }
+        });
+
+
+        // ============ Control Buttons ============
+        document.getElementById('closeBtn').onclick = async () => {
+            await invoke('hide_overlay');
+        };
+
+        document.getElementById('newChatBtn').onclick = () => {
+            openTextbox();
+        };
+
+        document.getElementById('settingsBtn').onclick = async () => {
+            const isNowVisible = await invoke('toggle_main_window');
+            document.getElementById('settingsBtn').classList.toggle('active', isNowVisible);
+        };
+
+        // Listen for hitbox edit event from settings page
+        listen('enter-hitbox-edit', () => {
+            if (!hitboxEditMode) {
+                enterHitboxEditMode();
+            }
+        });
+
+        // Listen for hitbox preview toggle from settings page
+        listen('toggle-hitbox-preview', async () => {
+            if (hitboxEditMode) return; // Don't toggle preview while editing
+
+            // Load hitbox if not already loaded
+            if (hitboxPoints.length < 3) {
+                await loadSavedHitbox();
+            }
+
+            hitboxPreviewMode = !hitboxPreviewMode;
+
+            if (hitboxPreviewMode && hitboxPoints.length >= 3) {
+                isPolygonClosed = true;
+                hitboxCanvas.style.display = 'block';
+                resizeHitboxCanvas();
+                renderHitboxOverlay();
+                console.log('[Hitbox] Preview ON -', hitboxPoints.length, 'points');
+            } else {
+                hitboxPreviewMode = false;
+                hitboxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                hitboxCanvas.style.display = 'none';
+                console.log('[Hitbox] Preview OFF');
+            }
+        });
+
+        document.body.addEventListener('mousedown', async (event) => {
+            // Handle hitbox editing clicks
+            if (hitboxEditMode) {
+                if (!event.target.closest('.control-bar')) {
+                    handleHitboxClick(event);
+                }
+                return;
+            }
+
+            if (event.target.closest('.control-bar')) return;
+            if (event.target.closest('.textbox-container')) return;
+
+            // Only drag if inside polygon (or no polygon defined)
+            if (hitboxPoints.length < 3 || isPointInPolygon(event.clientX, event.clientY, hitboxPoints)) {
+                const win = getCurrentWindow();
+                await win.startDragging();
+            }
+        });
+
+        // ============ Textbox Toggle (F12) ============
+        const textboxContainer = document.getElementById('textboxContainer');
+        const chatInput = document.getElementById('chatInput');
+        const responseContainer = document.getElementById('responseContainer');
+        const responseText = document.getElementById('responseText');
+        const historyModal = document.getElementById('historyModal');
+        const historyContent = document.getElementById('historyContent');
+
+        // NOTE: State variables are now in AppState object at top of file
+
+        /**
+         * Gets navigable elements in history based on current filter level
+         * @returns {HTMLElement[]} Array of navigable DOM elements
+         */
+        function getNavigableElements() {
+            const elements = [];
+            historyContent.querySelectorAll('.history-message').forEach(msg => {
+                // Apply filter based on level
+                if (AppState.historyFilterLevel === 1 && !msg.classList.contains('miku')) {
+                    return; // Skip non-miku messages in filtered mode
+                }
+
+                if (msg.classList.contains('assistant')) {
+                    // Add block-level children, skip short one-liners
+                    msg.querySelectorAll('p, h2, h3, h4, pre, ul, ol').forEach(el => {
+                        if (el.textContent.trim().length >= MIN_ASSISTANT_TEXT_LENGTH) {
+                            elements.push(el);
+                        }
+                    });
+                } else {
+                    // User/miku messages always included
+                    elements.push(msg);
+                }
+            });
+            return elements;
+        }
+
+        /**
+         * Navigates through history elements vertically
+         * @param {'up'|'down'} direction - Navigation direction
+         * @returns {boolean} True if navigation occurred, false if should close modal
+         */
+        function navigateHistoryVertical(direction) {
+            const elements = getNavigableElements();
+            if (elements.length === 0) return true;
+
+            // Remove focus from current element
+            if (AppState.historyFocusIndex >= 0 && AppState.historyFocusIndex < elements.length) {
+                elements[AppState.historyFocusIndex].classList.remove('focused');
+            }
+
+            if (direction === 'up') {
+                if (AppState.historyFocusIndex <= 0) {
+                    AppState.historyFocusIndex = elements.length - 1; // Wrap to bottom
+                } else {
+                    AppState.historyFocusIndex--;
+                }
+            } else {
+                if (AppState.historyFocusIndex >= elements.length - 1) {
+                    return false; // Signal to close modal
+                } else {
+                    AppState.historyFocusIndex++;
+                }
+            }
+
+            // Focus new element
+            elements[AppState.historyFocusIndex].classList.add('focused');
+            elements[AppState.historyFocusIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return true;
+        }
+
+        /**
+         * Changes the history filter level
+         * @param {'left'|'right'} direction - Direction to change level
+         */
+        function changeHistoryLevel(direction) {
+            if (direction === 'right' && AppState.historyFilterLevel < 2) {
+                AppState.historyFilterLevel++;
+            } else if (direction === 'left' && AppState.historyFilterLevel > 0) {
+                if (AppState.historyFilterLevel === 2) {
+                    clearCooldownTimer();
+                }
+                AppState.historyFilterLevel--;
+            } else {
+                return; // No change needed
+            }
+
+            AppState.historyFocusIndex = -1;
+            loadChatHistory().then(() => {
+                applyHistoryFilter();
+                chatInput.focus();
+                updateScreenshotVisual();
+            });
+        }
+
+        /**
+         * Determines if a message should be filtered based on current level
+         * @param {string} role - Message role (user/assistant/miku/deep-thought)
+         * @param {number} msgContextLevel - Message's context level
+         * @returns {boolean} True if message should be hidden
+         */
+        function shouldFilterMessage(role, msgContextLevel) {
+            const level = AppState.historyFilterLevel;
+
+            if (level === 0) {
+                // Level 0: Show user(0) + assistant + miku(0), hide deep-thought
+                if (role === 'deep-thought') return true;
+                if (role === 'user' && msgContextLevel !== 0) return true;
+                if (role === 'miku' && msgContextLevel !== 0) return true;
+            } else if (level === 1) {
+                // Level 1: Show user(1) + ALL miku messages
+                if (role === 'user' && msgContextLevel !== 1) return true;
+                if (role === 'assistant' || role === 'deep-thought') return true;
+            } else if (level === 2) {
+                // Level 2: Show user(2) + ALL deep-thought messages
+                if (role === 'user' && msgContextLevel !== 2) return true;
+                if (role === 'assistant' || role === 'miku') return true;
+            }
+            return false;
+        }
+
+        /**
+         * Applies message visibility filtering based on current level
+         */
+        function filterMessagesByLevel() {
+            historyContent.querySelectorAll('.history-message').forEach(msg => {
+                const role = msg.classList.contains('user') ? 'user' :
+                             msg.classList.contains('assistant') ? 'assistant' :
+                             msg.classList.contains('miku') ? 'miku' :
+                             msg.classList.contains('deep-thought') ? 'deep-thought' : 'unknown';
+                const msgContextLevel = parseInt(msg.getAttribute('data-context-level') || '0', 10);
+                msg.classList.toggle('filtered', shouldFilterMessage(role, msgContextLevel));
+            });
+        }
+
+        /**
+         * Updates the input field placeholder and state based on current level
+         */
+        function updateInputStateForLevel() {
+            const textboxContainer = document.getElementById('textboxContainer');
+            if (AppState.historyFilterLevel === 2) {
+                textboxContainer.classList.add('level-2');
+                if (AppState.cooldownRemainingSeconds > 0) {
+                    chatInput.placeholder = `Deep insights recharge in ${formatCooldownTime(AppState.cooldownRemainingSeconds)}`;
+                    chatInput.disabled = true;
+                } else {
+                    chatInput.placeholder = 'Magic Think';
+                    chatInput.disabled = false;
+                }
+                checkCooldownStatus();
+            } else {
+                textboxContainer.classList.remove('level-2');
+                chatInput.placeholder = 'Type a message...';
+                chatInput.disabled = false;
+            }
+        }
+
+        /**
+         * Main function to apply history filter - orchestrates filtering, UI updates, and scroll
+         */
+        function applyHistoryFilter() {
+            // Clear current focus
+            historyContent.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+
+            // Apply filtering
+            filterMessagesByLevel();
+
+            // Update UI elements
+            updateLevelIndicator();
+            updateInputStateForLevel();
+            updateScreenshotVisual();
+
+            // Scroll to bottom after filter applied
+            scrollHistoryToBottom();
+        }
+
+        // Helper function to scroll history to bottom
+        function scrollHistoryToBottom() {
+            historyContent.scrollTop = historyContent.scrollHeight;
+        }
+
+        /**
+         * Checks if deep research is on cooldown and starts timer if needed
+         */
+        async function checkCooldownStatus() {
+            try {
+                const result = await invoke('trigger_deep_research');
+                if (result.on_cooldown && result.remaining_seconds > 0) {
+                    startCooldownTimer(result.remaining_seconds);
+                } else {
+                    // Not on cooldown - show Magic Think placeholder
+                    if (AppState.historyFilterLevel === 2) {
+                        chatInput.placeholder = 'Magic Think';
+                    }
+                }
+            } catch (e) {
+                console.log('[Cooldown] Check failed:', e);
+            }
+        }
+
+        /**
+         * Updates the level indicator dashes and badge
+         */
+        function updateLevelIndicator() {
+            const indicator = document.getElementById('levelIndicator');
+            indicator.querySelectorAll('.dash').forEach((dash, i) => {
+                dash.classList.toggle('active', i === AppState.historyFilterLevel);
+            });
+
+            // Update level badge
+            const badge = document.getElementById('levelBadge');
+            if (badge) {
+                badge.textContent = LEVEL_LABELS[AppState.historyFilterLevel];
+                badge.className = `level-badge level-${AppState.historyFilterLevel}`;
+            }
+        }
+
+        function showLevelIndicator() {
+            const indicator = document.getElementById('levelIndicator');
+            indicator.classList.add('visible');
+        }
+
+        function hideLevelIndicator() {
+            const indicator = document.getElementById('levelIndicator');
+            indicator.classList.remove('visible');
+        }
+
+        // Cooldown timer functions (state stored in AppState)
+
+        /**
+         * Formats cooldown time in human-readable format
+         * @param {number} seconds - Remaining seconds
+         * @returns {string} Formatted time string
+         */
+        function formatCooldownTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        }
+
+        /**
+         * Starts the cooldown timer for deep research
+         * @param {number} seconds - Cooldown duration in seconds
+         */
+        function startCooldownTimer(seconds) {
+            clearCooldownTimer();
+            AppState.cooldownRemainingSeconds = seconds;
+
+            // Update placeholder and disable input if at level 2
+            if (AppState.historyFilterLevel === 2) {
+                chatInput.placeholder = `Deep insights recharge in ${formatCooldownTime(seconds)}`;
+                chatInput.disabled = true;
+            }
+
+            AppState.cooldownTimer = setInterval(() => {
+                AppState.cooldownRemainingSeconds--;
+                if (AppState.cooldownRemainingSeconds <= 0) {
+                    clearCooldownTimer();
+                    updateStatus('Deep Thought ready!', 'success');
+                    setTimeout(() => updateStatus('', ''), 2000);
+                } else if (AppState.historyFilterLevel === 2) {
+                    chatInput.placeholder = `Deep insights recharge in ${formatCooldownTime(AppState.cooldownRemainingSeconds)}`;
+                    chatInput.disabled = true;
+                }
+            }, 1000);
+        }
+
+        /**
+         * Clears the cooldown timer and resets state
+         */
+        function clearCooldownTimer() {
+            if (AppState.cooldownTimer) {
+                clearInterval(AppState.cooldownTimer);
+                AppState.cooldownTimer = null;
+            }
+            AppState.cooldownRemainingSeconds = 0;
+            // Reset placeholder and re-enable input if at level 2
+            if (AppState.historyFilterLevel === 2) {
+                chatInput.placeholder = 'Magic Think';
+                chatInput.disabled = false;
+            }
+        }
+
+        // Deep research trigger
+        async function triggerDeepResearch() {
+            try {
+                console.log('[DeepResearch] Starting...');
+                updateStatus('Analyzing...', 'listening');
+                const result = await invoke('trigger_deep_research');
+                console.log('[DeepResearch] Result:', result);
+
+                if (result.on_cooldown) {
+                    startCooldownTimer(result.remaining_seconds);
+                    await loadChatHistory();
+                    applyHistoryFilter();
+                } else {
+                    // Research complete - start cooldown timer
+                    startCooldownTimer(6 * 60 * 60); // 6 hours
+                    await loadChatHistory();
+                    applyHistoryFilter();
+                    updateStatus('Deep Thought complete!', 'success');
+                    setTimeout(() => updateStatus('', ''), 2000);
+                }
+            } catch (error) {
+                console.error('[DeepResearch] Error:', error);
+                updateStatus(String(error), 'error');
+                setTimeout(() => updateStatus('', ''), 5000);
+            }
+        }
+
+        /**
+         * Updates the textbox visual state based on screenshot toggle
+         */
+        function updateScreenshotVisual() {
+            if (AppState.includeScreenshot) {
+                textboxContainer.classList.add('with-screenshot');
+            } else {
+                textboxContainer.classList.remove('with-screenshot');
+            }
+        }
+
+        function openTextbox() {
+            updateScreenshotVisual(); // Apply saved state
+            textboxContainer.classList.add('visible');
+            chatInput.focus();
+        }
+
+        function closeTextbox() {
+            textboxContainer.classList.remove('visible');
+            chatInput.blur();
+        }
+
+        listen('toggle-textbox', () => {
+            const isVisible = textboxContainer.classList.contains('visible');
+            const isHistoryOpen = historyModal.classList.contains('visible');
+
+            if (isVisible && !isHistoryOpen) {
+                closeTextbox();
+            } else {
+                openTextbox();
+            }
+        });
+
+        // Markdown parser function
+        function parseMarkdown(text) {
+            // Escape HTML first
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Code blocks (```...```)
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+                return `<pre><code class="lang-${lang}">${code.trim()}</code></pre>`;
+            });
+
+            // Inline code (`...`)
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+            // Headers (# ## ###)
+            html = html.replace(/^### (.*$)/gm, '<h4>$1</h4>');
+            html = html.replace(/^## (.*$)/gm, '<h3>$1</h3>');
+            html = html.replace(/^# (.*$)/gm, '<h2>$1</h2>');
+
+            // Bold (**text** or __text__)
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+            // Italic (*text* or _text_)
+            html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+            html = html.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>');
+
+            // Unordered lists
+            html = html.replace(/^[\s]*[-*+] (.+)$/gm, '<li>$1</li>');
+
+            // Ordered lists
+            html = html.replace(/^[\s]*\d+\. (.+)$/gm, '<li>$1</li>');
+
+            // Wrap consecutive li elements in ul
+            html = html.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+            html = html.replace(/<\/ul>\s*<ul>/g, '');
+
+            // Line breaks (double newline = paragraph)
+            const parts = html.split(/\n\n+/);
+            html = parts.map(p => {
+                p = p.trim();
+                if (!p) return '';
+                if (p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<ul') || p.startsWith('<ol')) {
+                    return p;
+                }
+                return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+            }).join('');
+
+            return html;
+        }
+
+        // Hover timer variables
+        let autoHideTimer = null;
+        let isHoveringResponse = false;
+
+        function startAutoHideTimer() {
+            clearAutoHideTimer();
+            if (!isHoveringResponse) {
+                autoHideTimer = setTimeout(() => {
+                    responseContainer.classList.remove('visible');
+                }, 10000);
+            }
+        }
+
+        function clearAutoHideTimer() {
+            if (autoHideTimer) {
+                clearTimeout(autoHideTimer);
+                autoHideTimer = null;
+            }
+        }
+
+        // Add hover listeners for response container
+        responseContainer.addEventListener('mouseenter', () => {
+            isHoveringResponse = true;
+            clearAutoHideTimer();
+        });
+
+        responseContainer.addEventListener('mouseleave', () => {
+            isHoveringResponse = false;
+            startAutoHideTimer();
+        });
+
+        // Response display functions
+        function showLoading() {
+            responseText.textContent = 'Thinking...';
+            responseText.className = 'response-text loading';
+            responseContainer.classList.add('visible');
+            clearAutoHideTimer();
+        }
+
+        function showResponse(response) {
+            // Handle both structured response and plain string (for backwards compatibility)
+            const { main_response, character_comments } = typeof response === 'object' && response !== null
+                ? response
+                : { main_response: response, character_comments: null };
+
+            responseText.innerHTML = '';
+            responseText.className = 'response-text';
+
+            if (character_comments && character_comments.length > 0) {
+                // Split main response into paragraphs and interleave Miku comments
+                const paragraphs = main_response.split(/\n\n+/).filter(p => p.trim());
+
+                paragraphs.forEach((para, idx) => {
+                    // Add main paragraph with markdown parsing
+                    const mainDiv = document.createElement('div');
+                    mainDiv.className = 'markdown-content';
+                    mainDiv.innerHTML = parseMarkdown(para);
+                    responseText.appendChild(mainDiv);
+
+                    // Add Miku comment after paragraph (if available)
+                    if (character_comments[idx]) {
+                        const mikuP = document.createElement('p');
+                        mikuP.className = 'miku-comment';
+                        mikuP.textContent = character_comments[idx];
+                        responseText.appendChild(mikuP);
+                    }
+                });
+
+                // Add remaining Miku comments if any
+                for (let i = paragraphs.length; i < character_comments.length; i++) {
+                    const mikuP = document.createElement('p');
+                    mikuP.className = 'miku-comment';
+                    mikuP.textContent = character_comments[i];
+                    responseText.appendChild(mikuP);
+                }
+            } else {
+                // No character comments - just render markdown
+                responseText.innerHTML = parseMarkdown(main_response);
+            }
+
+            responseContainer.classList.add('visible');
+            startAutoHideTimer();
+        }
+
+        function showError(error) {
+            responseText.textContent = 'Error: ' + error;
+            responseText.className = 'response-text error';
+            responseContainer.classList.add('visible');
+            startAutoHideTimer();
+        }
+
+        function hideResponse() {
+            clearAutoHideTimer();
+            responseContainer.classList.remove('visible');
+        }
+
+        // Tab to toggle screenshot, Escape to dismiss, Enter to submit
+        chatInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                AppState.includeScreenshot = !AppState.includeScreenshot;
+                localStorage.setItem('screenshotEnabled', AppState.includeScreenshot);
+                updateScreenshotVisual();
+                updateStatus(AppState.includeScreenshot ? '📷 Screenshot attached' : '📷 Screenshot disabled', 'listening');
+                setTimeout(() => updateStatus('', ''), 1500);
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const isHistoryOpen = historyModal.classList.contains('visible');
+                if (!isHistoryOpen) {
+                    showHistoryModal();
+                    AppState.historyFocusIndex = -1;
+                } else {
+                    navigateHistoryVertical('up');
+                }
+            }
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const isHistoryOpen = historyModal.classList.contains('visible');
+                if (isHistoryOpen) {
+                    if (!navigateHistoryVertical('down')) {
+                        hideHistoryModal();
+                    }
+                }
+            }
+            if (e.key === 'Escape') {
+                const now = Date.now();
+                const isHistoryOpen = historyModal.classList.contains('visible');
+                const isTextboxVisible = textboxContainer.classList.contains('visible');
+
+                if (isHistoryOpen) {
+                    // Close history first
+                    hideHistoryModal();
+                } else if (isTextboxVisible) {
+                    // Close textbox
+                    closeTextbox();
+                    hideResponse();
+                    AppState.lastEscapeTime = now;
+                } else if (now - AppState.lastEscapeTime < DOUBLE_TAP_THRESHOLD_MS) {
+                    // Double escape: hide character
+                    invoke('hide_overlay');
+                    AppState.lastEscapeTime = 0;
+                } else {
+                    AppState.lastEscapeTime = now;
+                }
+            }
+            // ArrowRight/Left for history navigation handled by window-level handler
+            if (e.key === 'Enter') {
+                const message = chatInput.value.trim();
+                const isHistoryOpen = historyModal.classList.contains('visible');
+
+                // If at level 2 with empty input and not on cooldown, trigger deep research
+                if (isHistoryOpen && AppState.historyFilterLevel === 2 && !message && AppState.cooldownRemainingSeconds <= 0) {
+                    e.preventDefault();
+                    triggerDeepResearch();
+                    return;
+                }
+
+                // Normal message send (only if there's a message)
+                if (!message) return;
+
+                const withScreenshot = AppState.includeScreenshot;
+                console.log('[Chat] Sending message:', message, 'screenshot:', withScreenshot);
+                chatInput.value = '';
+                closeTextbox();
+
+                if (isHistoryOpen) {
+                    // Add user message to history immediately
+                    const userDiv = document.createElement('div');
+                    userDiv.className = 'history-message user';
+                    userDiv.textContent = message;
+                    historyContent.appendChild(userDiv);
+
+                    // Add loading indicator
+                    const loadingDiv = document.createElement('div');
+                    loadingDiv.className = 'history-message assistant';
+                    loadingDiv.id = 'history-loading';
+                    loadingDiv.textContent = 'Thinking...';
+                    historyContent.appendChild(loadingDiv);
+
+                    // Scroll to bottom
+                    scrollHistoryToBottom();
+                } else {
+                    showLoading();
+                }
+
+                try {
+                    const contextLevel = isHistoryOpen ? AppState.historyFilterLevel : 0;
+                    const response = await invoke('send_chat_message', { message, includeScreenshot: withScreenshot, contextLevel });
+                    console.log('[Chat] Response:', response);
+
+                    if (isHistoryOpen) {
+                        // Remove loading indicator and reload full history
+                        const loadingEl = document.getElementById('history-loading');
+                        if (loadingEl) loadingEl.remove();
+                        await loadChatHistory();
+                        applyHistoryFilter();
+                    } else {
+                        showResponse(response);
+                    }
+                } catch (error) {
+                    console.error('[Chat] Error:', error);
+                    if (isHistoryOpen) {
+                        const loadingEl = document.getElementById('history-loading');
+                        if (loadingEl) {
+                            loadingEl.textContent = 'Error: ' + error;
+                            loadingEl.style.color = '#f87171';
+                        }
+                    } else {
+                        showError(error);
+                    }
+                }
+            }
+        });
+
+        // Window-level keyboard handler for history (works even when input not focused)
+        window.addEventListener('keydown', (e) => {
+            const isHistoryOpen = historyModal.classList.contains('visible');
+            if (!isHistoryOpen) return;
+
+            // Don't interfere if typing in the input
+            if (document.activeElement === chatInput && chatInput.value !== '') return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                hideHistoryModal();
+                return;
+            }
+
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigateHistoryVertical('up');
+            }
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!navigateHistoryVertical('down')) {
+                    hideHistoryModal();
+                }
+            }
+
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                changeHistoryLevel('right');
+            }
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                changeHistoryLevel('left');
+            }
+        });
+
+        // Click outside to dismiss
+        document.addEventListener('click', (e) => {
+            if (!textboxContainer.contains(e.target) &&
+                !responseContainer.contains(e.target) &&
+                !e.target.closest('.control-bar') &&
+                textboxContainer.classList.contains('visible')) {
+                closeTextbox();
+            }
+        });
+
+        // ============ Chat History ============
+        async function loadChatHistory() {
+            try {
+                const history = await invoke('get_chat_history');
+                historyContent.innerHTML = '';
+
+                if (history.length === 0) {
+                    historyContent.innerHTML = '<div class="history-empty">No chat history yet</div>';
+                    return;
+                }
+
+                history.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `history-message ${msg.role}`;
+
+                    // Store context level for filtering
+                    div.setAttribute('data-context-level', msg.context_level || 0);
+
+                    // Mark deep-thought messages with data attribute
+                    if (msg.role === 'deep-thought') {
+                        div.setAttribute('data-deep-thought', 'true');
+                    }
+
+                    // Use markdown parsing for assistant and deep-thought messages, plain text for user/miku
+                    if (msg.role === 'assistant' || msg.role === 'deep-thought') {
+                        div.innerHTML = parseMarkdown(msg.content);
+                    } else {
+                        div.textContent = msg.content;
+                    }
+
+                    historyContent.appendChild(div);
+                });
+
+                // Scroll to bottom
+                scrollHistoryToBottom();
+            } catch (error) {
+                console.error('[History] Failed to load:', error);
+                historyContent.innerHTML = '<div class="history-empty">Failed to load history</div>';
+            }
+        }
+
+        async function showHistoryModal() {
+            historyModal.classList.add('visible');
+            await loadChatHistory();
+            showLevelIndicator();
+            updateLevelIndicator();
+            applyHistoryFilter(); // Apply filter based on current level (0 on re-open)
+            // Scroll to bottom after everything is loaded
+            scrollHistoryToBottom();
+        }
+
+        function hideHistoryModal() {
+            historyModal.classList.remove('visible');
+            AppState.historyFocusIndex = -1;
+            AppState.historyFilterLevel = 0;
+            historyContent.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+            // Reset filter state of all messages
+            historyContent.querySelectorAll('.history-message').forEach(msg => msg.classList.remove('filtered'));
+            hideLevelIndicator();
+            clearCooldownTimer();
+            // Reset input styling
+            textboxContainer.classList.remove('level-2');
+            chatInput.placeholder = 'Type a message...';
+            chatInput.disabled = false;
+        }
+
+        document.getElementById('historyBtn').onclick = () => {
+            showHistoryModal();
+        };
+
+        document.getElementById('closeHistoryBtn').onclick = () => {
+            hideHistoryModal();
+        };
+
+        // Listen for tray menu event to show history
+        listen('show-chat-history', () => {
+            showHistoryModal();
+        });
+
+        // ============ UI Helpers ============
+        function updateStatus(text, className) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.textContent = text;
+            indicator.className = 'status-indicator ' + className;
+        }
+
+        // ============ Idle Animation ============
+        let breathePhase = 0;
+        setInterval(() => {
+            if (live2dOverlay.model) {
+                breathePhase += 0.02;
+                const breathe = Math.sin(breathePhase) * 0.02;
+                live2dOverlay.setParameter('ParamBreath', 0.5 + breathe * 10);
+
+                if (Math.random() < 0.002) {
+                    triggerBlink();
+                }
+            }
+        }, 16);
+
+        function triggerBlink() {
+            const blinkDuration = 150;
+            const startTime = Date.now();
+
+            function blinkFrame() {
+                const elapsed = Date.now() - startTime;
+                const progress = elapsed / blinkDuration;
+
+                if (progress < 0.5) {
+                    const eyeOpen = 1 - (progress * 2);
+                    live2dOverlay.setParameter('ParamEyeLOpen', eyeOpen);
+                    live2dOverlay.setParameter('ParamEyeROpen', eyeOpen);
+                } else if (progress < 1) {
+                    const eyeOpen = (progress - 0.5) * 2;
+                    live2dOverlay.setParameter('ParamEyeLOpen', eyeOpen);
+                    live2dOverlay.setParameter('ParamEyeROpen', eyeOpen);
+                } else {
+                    live2dOverlay.setParameter('ParamEyeLOpen', 1);
+                    live2dOverlay.setParameter('ParamEyeROpen', 1);
+                    return;
+                }
+                requestAnimationFrame(blinkFrame);
+            }
+            blinkFrame();
+        }
+
+        // Listen for init-complete event from main window
+        listen('init-complete', () => {
+            console.log('[Overlay] Init complete - loading model');
+            autoLoadModel();
+        });
+
+        // Listen for reload-character event to hot-reload textures
+        listen('reload-character', () => {
+            console.log('[Overlay] Reload character event received - reloading model');
+            autoLoadModel();
+        });
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            live2dOverlay.initApp();
+            console.log('[Overlay] Ready - auto-loading model');
+            // Auto-load model on page load (handles both initial load and reload cases)
+            autoLoadModel();
+
+            // Initialize hitbox canvas (but keep hidden)
+            resizeHitboxCanvas();
+
+            // Check if main window (settings) is already visible and update settings button state
+            try {
+                const isMainVisible = await invoke('is_main_window_visible');
+                document.getElementById('settingsBtn').classList.toggle('active', isMainVisible);
+            } catch (e) {
+                console.log('[Overlay] Could not check main window visibility:', e);
+            }
+        });
+
+        // Listen for main window visibility changes
+        listen('main-window-visibility-changed', (event) => {
+            const isVisible = event.payload.visible;
+            document.getElementById('settingsBtn').classList.toggle('active', isVisible);
+        });
+    </script>
+</body>
+</html>

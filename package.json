@@ -1,0 +1,27 @@
+{
+  "name": "oto-pure",
+  "version": "0.1.0",
+  "description": "A desktop Live2D character companion with AI chat integration",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "live2d",
+    "ai",
+    "desktop",
+    "tauri",
+    "openai",
+    "character",
+    "companion"
+  ],
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:mac": "tauri build --target universal-apple-darwin",
+    "build:windows": "tauri build --target x86_64-pc-windows-msvc"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.9.0",
+    "@tauri-apps/cli": "^2.9.5"
+  }
+}

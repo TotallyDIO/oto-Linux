@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oto Pure</title>
+    <style>
+        :root {
+            --bg-primary: #f7f7f5;
+            --bg-secondary: #eeeee9;
+            --bg-dark: #2d2d2d;
+            --accent-blue: #0066ff;
+            --accent-blue-hover: #0052cc;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #d4d4d0;
+            --success: #00c853;
+            --danger: #ff3b30;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.loading {
+            background: var(--accent-blue);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Sections */
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--bg-dark);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 16px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background: #404040;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-blue-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #e6352b;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-dark);
+            color: white;
+            border-color: var(--bg-dark);
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 10px;
+        }
+
+        .btn-lg {
+            padding: 14px 28px;
+            font-size: 12px;
+        }
+
+        /* Inputs */
+        input, textarea {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            border-radius: 4px;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.15s ease;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--accent-blue);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+
+        /* Form rows */
+        .form-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-row input {
+            flex: 1;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-hint {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .saved-indicator {
+            font-size: 10px;
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        /* Button groups */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Data section specific */
+        .data-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .danger-zone {
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            margin-top: 16px;
+        }
+
+        /* Main action */
+        .main-action {
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal-body {
+            color: var(--text-secondary);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        /* History Modal - larger */
+        .modal-history {
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-history .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 0;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+        }
+
+        .history-message {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .history-message.user {
+            background: rgba(0, 102, 255, 0.1);
+            color: var(--accent-blue);
+            margin-left: 20%;
+            border: 1px solid rgba(0, 102, 255, 0.2);
+        }
+
+        .history-message.assistant {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin-right: 20%;
+            border: 1px solid var(--border);
+        }
+
+        .history-message.miku {
+            background: rgba(57, 197, 187, 0.1);
+            color: #39c5bb;
+            font-style: italic;
+            margin-right: 20%;
+            border-left: 3px solid #39c5bb;
+        }
+
+        .history-empty {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 40px;
+        }
+
+        /* History markdown styles */
+        .history-message code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        .history-message pre {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .history-message pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: var(--bg-dark);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 11px;
+            animation: slideIn 0.2s ease, fadeOut 0.2s ease 3.8s;
+            max-width: 280px;
+        }
+
+        .toast.success {
+            border-left: 3px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 3px solid var(--danger);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--accent-blue);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Texture preview */
+        .texture-preview {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .preview-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preview-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .preview-label {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .preview-img {
+            width: 100%;
+            max-width: 120px;
+            height: auto;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .version-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            font-family: inherit;
+            font-size: 11px;
+            color: var(--text-primary);
+        }
+
+        .version-select:focus {
+            border-color: var(--accent-blue);
+            outline: none;
+        }
+
+        /* Audio result */
+        .audio-result {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Tutorial Section */
+        .tutorial-section {
+            background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .tutorial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tutorial-header:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tutorial-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .tutorial-toggle {
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .tutorial-section.collapsed .tutorial-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .tutorial-content {
+            padding: 0 16px 16px;
+            display: block;
+        }
+
+        .tutorial-section.collapsed .tutorial-content {
+            display: none;
+        }
+
+        /* Keyboard visual */
+        .keyboard-demo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin: 16px 0;
+        }
+
+        .key-row {
+            display: flex;
+            gap: 4px;
+        }
+
+        .key {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+            border: 1px solid #555;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .key.highlight {
+            background: linear-gradient(180deg, var(--accent-blue) 0%, #0052cc 100%);
+            border-color: var(--accent-blue);
+        }
+
+        /* Level pills */
+        .level-demo {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 12px 0;
+        }
+
+        .level-pill {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .level-pill.all { background: rgba(255,255,255,0.15); }
+        .level-pill.character { background: rgba(57,197,187,0.3); color: #39c5bb; }
+        .level-pill.deep { background: rgba(138,43,226,0.3); color: #dda0dd; }
+
+        /* Shortcut display */
+        .shortcut {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 11px;
+        }
+
+        .shortcut kbd {
+            background: #4a4a4a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        .tutorial-step {
+            margin-bottom: 16px;
+        }
+
+        .tutorial-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .tutorial-step-title {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .tutorial-step-desc {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            line-height: 1.5;
+        }
+
+        .tutorial-step-desc a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .tutorial-step-desc a:hover {
+            text-decoration: underline;
+        }
+
+        .tutorial-step-desc kbd {
+            background: #4a4a4a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        /* Collapsible Sections */
+        .section.collapsible {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s ease;
+        }
+
+        .section-header:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .section-header .section-label {
+            margin-bottom: 0;
+        }
+
+        .section-toggle {
+            font-size: 12px;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+        }
+
+        .section.collapsible.collapsed .section-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            padding: 0 16px 16px;
+        }
+
+        .section.collapsible.collapsed .section-content {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">Oto Pure</div>
+        <div class="status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">initializing</span>
+        </div>
+    </div>
+
+    <!-- Tutorial Section -->
+    <div class="tutorial-section" id="tutorialSection">
+        <div class="tutorial-header" id="tutorialHeader">
+            <span class="tutorial-title">How to Use</span>
+            <span class="tutorial-toggle">▼</span>
+        </div>
+        <div class="tutorial-content">
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">1. Open Chat</div>
+                <div class="tutorial-step-desc">
+                    Press <span class="shortcut"><kbd>⌥</kbd> + <kbd>Space</kbd></span> to open the chat input
+                </div>
+            </div>
+
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">2. Toggle Screenshots</div>
+                <div class="tutorial-step-desc">
+                    Press <kbd>Tab</kbd> to toggle whether screenshots are attached to your messages
+                </div>
+            </div>
+
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">3. Navigate History</div>
+                <div class="tutorial-step-desc">Press <kbd>↑</kbd> to open history, <kbd>↓</kbd> to close</div>
+                <div class="keyboard-demo">
+                    <div class="key-row">
+                        <div class="key highlight">↑</div>
+                    </div>
+                    <div class="key-row">
+                        <div class="key">←</div>
+                        <div class="key highlight">↓</div>
+                        <div class="key">→</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">4. Switch Context Levels</div>
+                <div class="tutorial-step-desc">Use <kbd>←</kbd> <kbd>→</kbd> arrows to switch between:</div>
+                <div class="level-demo">
+                    <span class="level-pill all">All</span>
+                    <span class="level-pill character">Character</span>
+                    <span class="level-pill deep">Deep Think</span>
+                </div>
+                <div class="tutorial-step-desc" style="margin-top: 8px;">
+                    <strong>All:</strong> Full ChatGPT responses<br>
+                    <strong>Character:</strong> Miku commentary only<br>
+                    <strong>Deep Think:</strong> AI insights (6hr cooldown)
+                </div>
+            </div>
+
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">5. Permissions</div>
+                <div class="tutorial-step-desc">
+                    Grant Screen Recording permission in<br>
+                    System Settings → Privacy → Screen Recording
+                </div>
+            </div>
+
+            <div class="tutorial-step">
+                <div class="tutorial-step-title">6. API Key</div>
+                <div class="tutorial-step-desc">
+                    Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Section -->
+    <div class="section collapsible" id="apiSection">
+        <div class="section-header">
+            <div class="section-label">API</div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="form-row" id="apiKeyRow">
+                <input type="password" id="apiKeyInput" placeholder="OpenAI API Key" />
+                <button class="btn btn-sm" id="saveKeyBtn">Save</button>
+            </div>
+            <div class="form-row" id="apiKeySaved" style="display: none;">
+                <span class="saved-indicator">API KEY CONFIGURED</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompts Section -->
+    <div class="section collapsible" id="promptsSection">
+        <div class="section-header">
+            <div class="section-label">Prompts</div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="form-group">
+                <div class="form-label">System Prompt</div>
+                <textarea id="systemPromptInput" placeholder="Customize AI behavior..."></textarea>
+                <div class="form-hint">Main AI assistant personality (Level 0)</div>
+            </div>
+            <div class="form-group" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <div class="form-label" style="color: #39c5bb;">Miku - Inner Monologue Prompt</div>
+                <textarea id="characterPromptInput" placeholder="Leave empty for default Miku commentary style..."></textarea>
+                <div class="form-hint">Miku's quirky reflections ON AI responses (Level 0 commentary)</div>
+            </div>
+            <div class="form-group">
+                <div class="form-label" style="color: #39c5bb;">Miku - Dialogue Prompt</div>
+                <textarea id="dialoguePromptInput" placeholder="Leave empty for default conversational Miku..."></textarea>
+                <div class="form-hint">Direct conversation AS Miku, sees both AI responses and inner thoughts (Level 1)</div>
+            </div>
+            <div class="form-group" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <div class="form-label">Deep Research Prompt</div>
+                <textarea id="deepResearchPromptInput" placeholder="Instructions for deep research mode that analyzes your conversations and provides insights..."></textarea>
+                <div class="form-hint">AI analyst mode (Level 2, 6hr cooldown)</div>
+            </div>
+            <div class="form-row">
+                <button class="btn btn-sm" id="savePromptsBtn">Save Prompts</button>
+                <span class="saved-indicator" id="promptsSaved" style="display: none;">SAVED</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Section -->
+    <div class="section collapsible" id="dataSection">
+        <div class="section-header">
+            <div class="section-label">Data</div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="data-actions">
+                <button class="btn btn-outline btn-sm" id="historyBtn">Chat History</button>
+                <button class="btn btn-outline btn-sm" id="screenshotsBtn">Screenshots</button>
+            </div>
+            <div class="danger-zone">
+                <button class="btn btn-danger btn-sm" id="clearDataBtn">Clear All Data</button>
+                <div class="form-hint">Deletes history, API key, and all settings</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Section -->
+    <div class="section collapsible" id="characterSection">
+        <div class="section-header">
+            <div class="section-label">Character</div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="texture-preview" id="texturePreview" style="display: none;">
+                <div class="preview-row">
+                    <div class="preview-item">
+                        <div class="preview-label">Original 00</div>
+                        <img id="originalTexture00" class="preview-img" />
+                    </div>
+                    <div class="preview-item">
+                        <div class="preview-label">Current 00</div>
+                        <img id="currentTexture00" class="preview-img" />
+                    </div>
+                </div>
+                <div class="preview-row">
+                    <div class="preview-item">
+                        <div class="preview-label">Original 01</div>
+                        <img id="originalTexture01" class="preview-img" />
+                    </div>
+                    <div class="preview-item">
+                        <div class="preview-label">Current 01</div>
+                        <img id="currentTexture01" class="preview-img" />
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" id="versionGroup" style="display: none;">
+                <div class="form-label">Saved Versions</div>
+                <select id="versionSelect" class="version-select">
+                    <option value="">-- Select version --</option>
+                </select>
+                <button class="btn btn-sm btn-danger" id="deleteVersionBtn" style="margin-top: 8px;">Delete Selected</button>
+            </div>
+            <div class="form-group">
+                <div class="form-label">Generate New Style</div>
+                <input type="text" id="texturePromptInput" class="text-input" placeholder="e.g. Change hair color to purple" />
+                <button class="btn btn-sm" id="generateTextureBtn" style="margin-top: 8px;">Generate</button>
+            </div>
+            <div class="form-hint">Uses AI to modify character appearance (experimental)</div>
+        </div>
+    </div>
+
+    <!-- Main Action -->
+    <div class="main-action">
+        <button class="btn btn-primary btn-lg" id="spawnBtn" disabled>Spawn Character</button>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Clear Data Confirmation Modal -->
+    <div class="modal-overlay" id="clearModal">
+        <div class="modal">
+            <div class="modal-title">Clear All Data?</div>
+            <div class="modal-body">
+                This will permanently delete your chat history, API key, prompts, and all settings. This action cannot be undone.
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-sm" id="clearCancelBtn">Cancel</button>
+                <button class="btn btn-danger btn-sm" id="clearConfirmBtn">Delete Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal modal-history">
+            <div class="modal-title">Chat History</div>
+            <div class="modal-body" id="historyContent">
+                <div class="history-empty">Loading...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-sm" id="historyCloseBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { invoke } = window.__TAURI__.core;
+        const { listen, emit } = window.__TAURI__.event;
+
+        // Elements
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveKeyBtn = document.getElementById('saveKeyBtn');
+        const apiKeyRow = document.getElementById('apiKeyRow');
+        const apiKeySaved = document.getElementById('apiKeySaved');
+        const systemPromptInput = document.getElementById('systemPromptInput');
+        const characterPromptInput = document.getElementById('characterPromptInput');
+        const dialoguePromptInput = document.getElementById('dialoguePromptInput');
+        const deepResearchPromptInput = document.getElementById('deepResearchPromptInput');
+        const savePromptsBtn = document.getElementById('savePromptsBtn');
+        const promptsSaved = document.getElementById('promptsSaved');
+        const historyBtn = document.getElementById('historyBtn');
+        const screenshotsBtn = document.getElementById('screenshotsBtn');
+        const clearDataBtn = document.getElementById('clearDataBtn');
+        const spawnBtn = document.getElementById('spawnBtn');
+        const toastContainer = document.getElementById('toast-container');
+        const clearModal = document.getElementById('clearModal');
+        const clearCancelBtn = document.getElementById('clearCancelBtn');
+        const clearConfirmBtn = document.getElementById('clearConfirmBtn');
+        const historyModal = document.getElementById('historyModal');
+        const historyContent = document.getElementById('historyContent');
+        const historyCloseBtn = document.getElementById('historyCloseBtn');
+        const texturePreview = document.getElementById('texturePreview');
+        const originalTexture00 = document.getElementById('originalTexture00');
+        const currentTexture00 = document.getElementById('currentTexture00');
+        const originalTexture01 = document.getElementById('originalTexture01');
+        const currentTexture01 = document.getElementById('currentTexture01');
+        const versionGroup = document.getElementById('versionGroup');
+        const versionSelect = document.getElementById('versionSelect');
+        const deleteVersionBtn = document.getElementById('deleteVersionBtn');
+        const texturePromptInput = document.getElementById('texturePromptInput');
+        const generateTextureBtn = document.getElementById('generateTextureBtn');
+
+        // Tutorial collapse toggle
+        const tutorialSection = document.getElementById('tutorialSection');
+        const tutorialHeader = document.getElementById('tutorialHeader');
+
+        if (localStorage.getItem('tutorialCollapsed') === 'true') {
+            tutorialSection.classList.add('collapsed');
+        }
+
+        tutorialHeader.addEventListener('click', () => {
+            tutorialSection.classList.toggle('collapsed');
+            localStorage.setItem('tutorialCollapsed', tutorialSection.classList.contains('collapsed'));
+        });
+
+        // Collapsible sections toggle
+        const collapsibleSections = ['apiSection', 'promptsSection', 'dataSection', 'characterSection'];
+
+        collapsibleSections.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const header = section.querySelector('.section-header');
+            if (!header) return;
+
+            // Restore saved state
+            if (localStorage.getItem(`${sectionId}Collapsed`) === 'true') {
+                section.classList.add('collapsed');
+            }
+
+            // Toggle on click
+            header.addEventListener('click', () => {
+                section.classList.toggle('collapsed');
+                localStorage.setItem(`${sectionId}Collapsed`, section.classList.contains('collapsed'));
+            });
+        });
+
+        let isOverlayVisible = false;
+        let hasApiKey = false;
+
+        // Status updates
+        function setStatus(text, loading = false) {
+            statusText.textContent = text;
+            statusDot.className = loading ? 'status-dot loading' : 'status-dot';
+        }
+
+        // Toast notifications
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // Load texture preview
+        async function loadTexturePreview() {
+            try {
+                const paths = await invoke('get_texture_paths');
+                const { convertFileSrc } = window.__TAURI__.core;
+
+                if (paths.has_original) {
+                    // Add cache-busting timestamp
+                    const timestamp = Date.now();
+
+                    if (paths.original_00) {
+                        originalTexture00.src = convertFileSrc(paths.original_00) + '?t=' + timestamp;
+                    }
+                    if (paths.current_00) {
+                        currentTexture00.src = convertFileSrc(paths.current_00) + '?t=' + timestamp;
+                    }
+                    if (paths.original_01) {
+                        originalTexture01.src = convertFileSrc(paths.original_01) + '?t=' + timestamp;
+                    }
+                    if (paths.current_01) {
+                        currentTexture01.src = convertFileSrc(paths.current_01) + '?t=' + timestamp;
+                    }
+
+                    texturePreview.style.display = 'flex';
+                } else {
+                    texturePreview.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load texture preview:', err);
+                texturePreview.style.display = 'none';
+            }
+        }
+
+        // Load saved versions
+        async function loadVersions() {
+            try {
+                const versions = await invoke('get_texture_versions');
+                versionSelect.innerHTML = '<option value="">-- Select version --</option>';
+
+                if (versions.length > 0) {
+                    versionGroup.style.display = 'block';
+                    versions.forEach(v => {
+                        const option = document.createElement('option');
+                        option.value = v.id;
+                        option.textContent = `${v.id}${v.prompt ? ' (' + v.prompt + ')' : ''}`;
+                        versionSelect.appendChild(option);
+                    });
+                } else {
+                    versionGroup.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load versions:', err);
+                versionGroup.style.display = 'none';
+            }
+        }
+
+        // Button text update
+        function updateSpawnButton() {
+            spawnBtn.textContent = isOverlayVisible ? 'Hide Character' : 'Spawn Character';
+        }
+
+        // Markdown parser (same as overlay)
+        function parseMarkdown(text) {
+            let html = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+                return `<pre><code>${code.trim()}</code></pre>`;
+            });
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            html = html.replace(/^### (.*$)/gm, '<strong>$1</strong>');
+            html = html.replace(/^## (.*$)/gm, '<strong>$1</strong>');
+            html = html.replace(/^# (.*$)/gm, '<strong>$1</strong>');
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+            return html;
+        }
+
+        // Load prompts
+        async function loadPrompts() {
+            try {
+                const systemPrompt = await invoke('get_system_prompt');
+                systemPromptInput.value = systemPrompt;
+            } catch (err) {
+                console.error('Failed to load system prompt:', err);
+            }
+
+            try {
+                const charPrompt = await invoke('get_character_prompt');
+                characterPromptInput.value = charPrompt;
+            } catch (err) {
+                console.error('Failed to load character prompt:', err);
+            }
+
+            try {
+                const dialoguePrompt = await invoke('get_dialogue_prompt');
+                dialoguePromptInput.value = dialoguePrompt;
+            } catch (err) {
+                console.error('Failed to load dialogue prompt:', err);
+            }
+
+            try {
+                const deepPrompt = await invoke('get_deep_research_prompt');
+                deepResearchPromptInput.value = deepPrompt;
+            } catch (err) {
+                console.error('Failed to load deep research prompt:', err);
+            }
+        }
+
+        // Save prompts
+        savePromptsBtn.addEventListener('click', async () => {
+            try {
+                await invoke('save_system_prompt', { prompt: systemPromptInput.value.trim() });
+                await invoke('save_character_prompt', { prompt: characterPromptInput.value.trim() });
+                await invoke('save_dialogue_prompt', { prompt: dialoguePromptInput.value.trim() });
+                await invoke('save_deep_research_prompt', { prompt: deepResearchPromptInput.value.trim() });
+                promptsSaved.style.display = 'inline';
+                showToast('Prompts saved', 'success');
+                setTimeout(() => { promptsSaved.style.display = 'none'; }, 2000);
+            } catch (err) {
+                showToast('Failed to save prompts: ' + err, 'error');
+            }
+        });
+
+        // Save API key
+        saveKeyBtn.addEventListener('click', async () => {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                showToast('Please enter an API key', 'error');
+                return;
+            }
+            try {
+                await invoke('save_api_key', { key });
+                hasApiKey = true;
+                apiKeyRow.style.display = 'none';
+                apiKeySaved.style.display = 'flex';
+                spawnBtn.disabled = false;
+                showToast('API key saved', 'success');
+
+                setTimeout(async () => {
+                    await invoke('hide_main_window');
+                }, 800);
+            } catch (err) {
+                showToast('Failed to save key: ' + err, 'error');
+            }
+        });
+
+        // Spawn/Hide character
+        spawnBtn.addEventListener('click', async () => {
+            try {
+                const nowVisible = await invoke('toggle_overlay');
+                isOverlayVisible = nowVisible;
+                updateSpawnButton();
+                setStatus(nowVisible ? 'character active' : 'character hidden');
+                showToast(nowVisible ? 'Character spawned' : 'Character hidden', 'success');
+            } catch (err) {
+                showToast('Failed to toggle: ' + err, 'error');
+            }
+        });
+
+        // Screenshots folder
+        screenshotsBtn.addEventListener('click', async () => {
+            try {
+                await invoke('open_screenshots_folder');
+            } catch (err) {
+                showToast('Failed to open folder: ' + err, 'error');
+            }
+        });
+
+        // Generate texture from prompt
+        generateTextureBtn.addEventListener('click', async () => {
+            const prompt = texturePromptInput.value.trim();
+            if (!prompt) {
+                showToast('Enter a prompt first', 'error');
+                return;
+            }
+            try {
+                generateTextureBtn.disabled = true;
+                generateTextureBtn.textContent = 'Generating...';
+                showToast('Sending to AI... this may take 30+ seconds', 'info');
+
+                const result = await invoke('generate_texture', { prompt });
+                showToast(result, 'success');
+
+                // Reload character to show new texture
+                await invoke('reload_character');
+                await loadTexturePreview();
+                await loadVersions();
+            } catch (err) {
+                showToast('Failed: ' + err, 'error');
+            } finally {
+                generateTextureBtn.disabled = false;
+                generateTextureBtn.textContent = 'Generate';
+            }
+        });
+
+        // Auto-apply when selecting a version
+        versionSelect.addEventListener('change', async () => {
+            const versionId = versionSelect.value;
+            if (!versionId) return;
+
+            try {
+                versionSelect.disabled = true;
+                showToast('Applying version...', 'info');
+
+                const result = await invoke('apply_texture_version', { versionId });
+                showToast(result, 'success');
+
+                // Reload character to show the applied texture
+                await invoke('reload_character');
+                await loadTexturePreview();
+            } catch (err) {
+                showToast('Failed: ' + err, 'error');
+            } finally {
+                versionSelect.disabled = false;
+            }
+        });
+
+        // Delete saved version
+        deleteVersionBtn.addEventListener('click', async () => {
+            const versionId = versionSelect.value;
+            if (!versionId) {
+                showToast('Select a version first', 'error');
+                return;
+            }
+            if (versionId === 'original') {
+                showToast('Cannot delete original textures', 'error');
+                return;
+            }
+            if (confirm('Delete this version permanently?')) {
+                try {
+                    deleteVersionBtn.disabled = true;
+                    const result = await invoke('delete_texture_version', { versionId });
+                    showToast(result, 'success');
+                    await loadVersions();
+                } catch (err) {
+                    showToast('Failed: ' + err, 'error');
+                } finally {
+                    deleteVersionBtn.disabled = false;
+                }
+            }
+        });
+
+        // Clear data modal
+        clearDataBtn.addEventListener('click', () => {
+            clearModal.classList.add('visible');
+        });
+
+        clearCancelBtn.addEventListener('click', () => {
+            clearModal.classList.remove('visible');
+        });
+
+        clearConfirmBtn.addEventListener('click', async () => {
+            try {
+                await invoke('clear_all_data');
+                showToast('All data cleared', 'success');
+                clearModal.classList.remove('visible');
+
+                // Reset UI state
+                apiKeyRow.style.display = 'flex';
+                apiKeySaved.style.display = 'none';
+                apiKeyInput.value = '';
+                systemPromptInput.value = '';
+                characterPromptInput.value = '';
+                dialoguePromptInput.value = '';
+                deepResearchPromptInput.value = '';
+                hasApiKey = false;
+                spawnBtn.disabled = true;
+                setStatus('data cleared');
+            } catch (err) {
+                showToast('Failed to clear data: ' + err, 'error');
+            }
+        });
+
+        // Chat history modal
+        historyBtn.addEventListener('click', async () => {
+            historyModal.classList.add('visible');
+            await loadChatHistory();
+        });
+
+        historyCloseBtn.addEventListener('click', () => {
+            historyModal.classList.remove('visible');
+        });
+
+        async function loadChatHistory() {
+            try {
+                const history = await invoke('get_chat_history');
+                historyContent.innerHTML = '';
+
+                if (history.length === 0) {
+                    historyContent.innerHTML = '<div class="history-empty">No chat history yet</div>';
+                    return;
+                }
+
+                history.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `history-message ${msg.role}`;
+
+                    if (msg.role === 'assistant') {
+                        div.innerHTML = parseMarkdown(msg.content);
+                    } else {
+                        div.textContent = msg.content;
+                    }
+
+                    historyContent.appendChild(div);
+                });
+
+                historyContent.scrollTop = historyContent.scrollHeight;
+            } catch (error) {
+                console.error('[History] Failed to load:', error);
+                historyContent.innerHTML = '<div class="history-empty">Failed to load history</div>';
+            }
+        }
+
+        // Close modals on overlay click
+        clearModal.addEventListener('click', (e) => {
+            if (e.target === clearModal) clearModal.classList.remove('visible');
+        });
+
+        historyModal.addEventListener('click', (e) => {
+            if (e.target === historyModal) historyModal.classList.remove('visible');
+        });
+
+        // Listen for overlay visibility changes
+        listen('overlay-visibility-changed', (event) => {
+            isOverlayVisible = event.payload.visible;
+            updateSpawnButton();
+        });
+
+        // Init
+        async function init() {
+            setStatus('checking dependencies', true);
+
+            try {
+                // Check API key
+                hasApiKey = await invoke('has_api_key');
+                if (hasApiKey) {
+                    apiKeyRow.style.display = 'none';
+                    apiKeySaved.style.display = 'flex';
+                }
+
+                // Load prompts
+                loadPrompts();
+
+                // Load texture preview and versions
+                loadTexturePreview();
+                loadVersions();
+
+                // Check if initialized
+                const initialized = await invoke('is_initialized');
+
+                if (!initialized) {
+                    setStatus('first time setup', true);
+                    showToast('Setting up...', 'info');
+                    await invoke('init_app');
+                }
+
+                // Check screen permission
+                setStatus('checking permissions', true);
+                const hasPermission = await invoke('check_screen_permission');
+
+                if (!hasPermission) {
+                    setStatus('permission required');
+                    showToast('Screen recording permission required', 'error');
+                    spawnBtn.textContent = 'Open Settings';
+                    spawnBtn.disabled = false;
+                    spawnBtn.onclick = async () => {
+                        await invoke('open_screen_recording_settings');
+                    };
+                    return;
+                }
+
+                // All good - spawn character
+                setStatus('ready');
+                spawnBtn.disabled = !hasApiKey;
+
+                if (hasApiKey) {
+                    await emit('init-complete', {});
+                    await invoke('show_overlay');
+                    isOverlayVisible = true;
+                    updateSpawnButton();
+                    showToast('Character spawned', 'success');
+                } else {
+                    showToast('Enter API key to continue', 'info');
+                }
+
+            } catch (err) {
+                console.error('[init] Error:', err);
+                setStatus('error');
+                showToast('Error: ' + err, 'error');
+            }
+        }
+
+        // Listen for init progress
+        listen('init-progress', (event) => {
+            const { step } = event.payload;
+            const messages = {
+                'pixi': 'loading graphics',
+                'cubism-core': 'loading live2d',
+                'cubism4': 'loading animations',
+                'model': 'downloading character',
+                'done': 'ready'
+            };
+            setStatus(messages[step] || step, step !== 'done');
+        });
+
+        init();
+    </script>
+</body>
+</html>
