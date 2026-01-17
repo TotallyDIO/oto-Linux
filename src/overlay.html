@@ -99,6 +99,35 @@
             background: rgba(76, 175, 80, 0.8);
         }
 
+        .control-btn[data-tooltip] {
+            position: relative;
+        }
+
+        .control-btn[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 12px;
+            white-space: nowrap;
+            border-radius: 6px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .control-btn[data-tooltip]:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
         /* Scale controls for transform edit mode */
         .scale-controls {
             position: fixed;
@@ -569,10 +598,10 @@
     </div>
 
     <div class="control-bar">
-        <button class="control-btn" id="newChatBtn" title="New Chat">&#x270E;</button>
-        <button class="control-btn" id="historyBtn" title="Chat History">&#x2191;</button>
-        <button class="control-btn" id="settingsBtn" title="Settings">&#x2699;</button>
-        <button class="control-btn" id="closeBtn" title="Close">&#x2715;</button>
+        <button class="control-btn" id="newChatBtn">&#x270E;</button>
+        <button class="control-btn" id="historyBtn">&#x2191;</button>
+        <button class="control-btn" id="settingsBtn">&#x2699;</button>
+        <button class="control-btn" id="closeBtn">&#x2715;</button>
     </div>
 
     <!-- Scale controls (visible in transform edit mode) -->
@@ -595,6 +624,18 @@
         const { listen } = window.__TAURI__.event;
         const { getCurrentWindow } = window.__TAURI__.window;
         const { convertFileSrc } = window.__TAURI__.core;
+
+        // Platform detection for keyboard shortcut tooltips
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const isLinux = navigator.platform.toUpperCase().indexOf('LINUX') >= 0;
+
+        function updateTooltips() {
+            const modKey = isMac ? '⌥' : (isLinux ? 'Super' : 'Alt');
+            document.getElementById('newChatBtn').dataset.tooltip = `New Chat (${modKey}+Space)`;
+            document.getElementById('historyBtn').dataset.tooltip = 'Chat History (↑)';
+            document.getElementById('settingsBtn').dataset.tooltip = 'Settings';
+            document.getElementById('closeBtn').dataset.tooltip = 'Close (Esc)';
+        }
 
         let currentBasePath = null;
         // Global cache buster - updated on each model reload to force fresh texture loading
@@ -2208,6 +2249,7 @@
         // Initialize
         window.addEventListener('DOMContentLoaded', async () => {
             live2dOverlay.initApp();
+            updateTooltips();
             console.log('[Overlay] Ready - auto-loading model');
             // Auto-load model on page load (handles both initial load and reload cases)
             autoLoadModel();
