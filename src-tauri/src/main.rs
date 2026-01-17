@@ -165,9 +165,9 @@ pub struct TransformConfig {
 impl Default for TransformConfig {
     fn default() -> Self {
         Self {
-            scale: 1.0,
-            offset_x: 0.0,
-            offset_y: 0.0,
+            scale: 1.5,
+            offset_x: 15.0,
+            offset_y: 109.0,
         }
     }
 }
@@ -867,7 +867,7 @@ async fn send_chat_message(
     // Get system prompt based on level
     let system_prompt = match context_level {
         1 => {
-            // Level 1: Use dialogue prompt (respond AS Miku in direct conversation)
+            // Level 1: Use dialogue prompt (respond AS the character in direct conversation)
             get_dialogue_prompt().await?
         }
         2 => {
@@ -903,8 +903,8 @@ async fn send_chat_message(
     for msg in &history {
         let include_msg = match context_level {
             1 => {
-                // Level 1: User + miku + assistant (includes AI responses for context)
-                msg.role == "user" || msg.role == "miku" || msg.role == "assistant"
+                // Level 1: User + character + assistant (includes AI responses for context)
+                msg.role == "user" || msg.role == "character" || msg.role == "assistant"
             }
             2 => {
                 // Level 2: Only user + deep-thought messages
@@ -921,15 +921,15 @@ async fn send_chat_message(
         }
 
         // Convert custom roles to "assistant" for API compatibility
-        // Add distinct labels for level 1 context so Miku knows what's what
-        let (role, content) = if msg.role == "miku" {
+        // Add distinct labels for level 1 context so character knows what's what
+        let (role, content) = if msg.role == "character" {
             if context_level == 1 {
                 (
                     "assistant",
-                    format!("[Miku's Inner Thoughts]: {}", msg.content),
+                    format!("[Character's Inner Thoughts]: {}", msg.content),
                 )
             } else {
-                ("assistant", format!("[Miku]: {}", msg.content))
+                ("assistant", format!("[Character]: {}", msg.content))
             }
         } else if msg.role == "assistant" && context_level == 1 {
             // For Level 1, format assistant messages distinctly
@@ -1009,8 +1009,8 @@ async fn send_chat_message(
 
     let character_comments = match context_level {
         1 => {
-            // Level 1: Save response as "miku", no separate character comments
-            store_chat_message(&timestamp, "miku", &main_response, 1)?;
+            // Level 1: Save response as "character", no separate character comments
+            store_chat_message(&timestamp, "character", &main_response, 1)?;
             None
         }
         2 => {
@@ -1019,10 +1019,10 @@ async fn send_chat_message(
             None
         }
         _ => {
-            // Level 0: Save as "assistant", then generate Miku comment
+            // Level 0: Save as "assistant", then generate character comment
             store_chat_message(&timestamp, "assistant", &main_response, 0)?;
 
-            // Generate Miku commentary for level 0 only
+            // Generate character commentary for level 0 only
             let char_system_prompt = get_character_prompt().await?;
 
             let char_messages: Vec<Value> = vec![
@@ -1055,8 +1055,8 @@ async fn send_chat_message(
                             .as_str()
                             .unwrap_or("");
                         if !char_content.is_empty() {
-                            // Store Miku comment at level 0
-                            store_chat_message(&timestamp, "miku", char_content, 0)?;
+                            // Store character comment at level 0
+                            store_chat_message(&timestamp, "character", char_content, 0)?;
                             // Return as single comment at end (not randomly inserted)
                             Some(vec![char_content.trim().to_string()])
                         } else {

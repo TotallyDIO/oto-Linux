@@ -306,8 +306,8 @@
             border-left: 3px solid #f87171;
         }
 
-        /* Miku comment styling */
-        .miku-comment {
+        /* Character comment styling */
+        .character-comment {
             color: #39c5bb;
             font-style: italic;
             font-size: 13px;
@@ -473,7 +473,7 @@
             margin-right: 20%;
         }
 
-        .history-message.miku {
+        .history-message.character {
             background: rgba(57, 197, 187, 0.15);
             color: #39c5bb;
             font-style: italic;
@@ -1164,9 +1164,9 @@
 
         // Listen for transform reset from settings
         listen('reset-character-transform', async () => {
-            live2dOverlay.characterScale = 1.0;
-            live2dOverlay.characterOffsetX = 0;
-            live2dOverlay.characterOffsetY = 0;
+            live2dOverlay.characterScale = 1.5;
+            live2dOverlay.characterOffsetX = 15.0;
+            live2dOverlay.characterOffsetY = 109.0;
             live2dOverlay.resizeModel();
             await saveTransformConfig();
         });
@@ -1468,8 +1468,8 @@
             const elements = [];
             historyContent.querySelectorAll('.history-message').forEach(msg => {
                 // Apply filter based on level
-                if (AppState.historyFilterLevel === 1 && !msg.classList.contains('miku')) {
-                    return; // Skip non-miku messages in filtered mode
+                if (AppState.historyFilterLevel === 1 && !msg.classList.contains('character')) {
+                    return; // Skip non-character messages in filtered mode
                 }
 
                 if (msg.classList.contains('assistant')) {
@@ -1480,7 +1480,7 @@
                         }
                     });
                 } else {
-                    // User/miku messages always included
+                    // User/character messages always included
                     elements.push(msg);
                 }
             });
@@ -1547,7 +1547,7 @@
 
         /**
          * Determines if a message should be filtered based on current level
-         * @param {string} role - Message role (user/assistant/miku/deep-thought)
+         * @param {string} role - Message role (user/assistant/character/deep-thought)
          * @param {number} msgContextLevel - Message's context level
          * @returns {boolean} True if message should be hidden
          */
@@ -1555,18 +1555,18 @@
             const level = AppState.historyFilterLevel;
 
             if (level === 0) {
-                // Level 0: Show user(0) + assistant + miku(0), hide deep-thought
+                // Level 0: Show user(0) + assistant + character(0), hide deep-thought
                 if (role === 'deep-thought') return true;
                 if (role === 'user' && msgContextLevel !== 0) return true;
-                if (role === 'miku' && msgContextLevel !== 0) return true;
+                if (role === 'character' && msgContextLevel !== 0) return true;
             } else if (level === 1) {
-                // Level 1: Show user(1) + ALL miku messages
+                // Level 1: Show user(1) + ALL character messages
                 if (role === 'user' && msgContextLevel !== 1) return true;
                 if (role === 'assistant' || role === 'deep-thought') return true;
             } else if (level === 2) {
                 // Level 2: Show user(2) + ALL deep-thought messages
                 if (role === 'user' && msgContextLevel !== 2) return true;
-                if (role === 'assistant' || role === 'miku') return true;
+                if (role === 'assistant' || role === 'character') return true;
             }
             return false;
         }
@@ -1578,7 +1578,7 @@
             historyContent.querySelectorAll('.history-message').forEach(msg => {
                 const role = msg.classList.contains('user') ? 'user' :
                              msg.classList.contains('assistant') ? 'assistant' :
-                             msg.classList.contains('miku') ? 'miku' :
+                             msg.classList.contains('character') ? 'character' :
                              msg.classList.contains('deep-thought') ? 'deep-thought' : 'unknown';
                 const msgContextLevel = parseInt(msg.getAttribute('data-context-level') || '0', 10);
                 msg.classList.toggle('filtered', shouldFilterMessage(role, msgContextLevel));
@@ -1895,7 +1895,7 @@
             responseText.className = 'response-text';
 
             if (character_comments && character_comments.length > 0) {
-                // Split main response into paragraphs and interleave Miku comments
+                // Split main response into paragraphs and interleave character comments
                 const paragraphs = main_response.split(/\n\n+/).filter(p => p.trim());
 
                 paragraphs.forEach((para, idx) => {
@@ -1905,21 +1905,21 @@
                     mainDiv.innerHTML = parseMarkdown(para);
                     responseText.appendChild(mainDiv);
 
-                    // Add Miku comment after paragraph (if available)
+                    // Add character comment after paragraph (if available)
                     if (character_comments[idx]) {
-                        const mikuP = document.createElement('p');
-                        mikuP.className = 'miku-comment';
-                        mikuP.textContent = character_comments[idx];
-                        responseText.appendChild(mikuP);
+                        const charP = document.createElement('p');
+                        charP.className = 'character-comment';
+                        charP.textContent = character_comments[idx];
+                        responseText.appendChild(charP);
                     }
                 });
 
-                // Add remaining Miku comments if any
+                // Add remaining character comments if any
                 for (let i = paragraphs.length; i < character_comments.length; i++) {
-                    const mikuP = document.createElement('p');
-                    mikuP.className = 'miku-comment';
-                    mikuP.textContent = character_comments[i];
-                    responseText.appendChild(mikuP);
+                    const charP = document.createElement('p');
+                    charP.className = 'character-comment';
+                    charP.textContent = character_comments[i];
+                    responseText.appendChild(charP);
                 }
             } else {
                 // No character comments - just render markdown
@@ -2131,7 +2131,7 @@
                         div.setAttribute('data-deep-thought', 'true');
                     }
 
-                    // Use markdown parsing for assistant and deep-thought messages, plain text for user/miku
+                    // Use markdown parsing for assistant and deep-thought messages, plain text for user/character
                     if (msg.role === 'assistant' || msg.role === 'deep-thought') {
                         div.innerHTML = parseMarkdown(msg.content);
                     } else {
