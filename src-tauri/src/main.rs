@@ -17,7 +17,7 @@ use rdev::{listen, Event, EventType};
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::io::{Read, Write as IoWrite};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem};
@@ -507,6 +507,113 @@ async fn change_model(app: AppHandle, url: String) -> Result<ModelConfig, String
 async fn reset_model(app: AppHandle) -> Result<ModelConfig, String> {
     // Reset to default model
     change_model(app, DEFAULT_MODEL_URL.to_string()).await
+}
+
+#[command]
+async fn load_model_from_folder(
+    app: AppHandle,
+    folder_path: String,
+) -> Result<ModelConfig, String> {
+    let models_dir = get_models_dir()?;
+    let source_path = PathBuf::from(&folder_path);
+
+    println!("[load_model_from_folder] Loading from: {}", folder_path);
+
+    // Validate source folder exists
+    if !source_path.exists() || !source_path.is_dir() {
+        return Err("Selected path is not a valid folder".to_string());
+    }
+
+    // Validate it contains a .model3.json file
+    let has_model = std::fs::read_dir(&source_path)
+        .map_err(|e| format!("Failed to read folder: {}", e))?
+        .filter_map(|e| e.ok())
+        .any(|entry| {
+            let name = entry.file_name().to_string_lossy().to_string();
+            name.ends_with(".model3.json")
+        });
+
+    if !has_model {
+        // Check subdirectories
+        let has_model_nested = std::fs::read_dir(&source_path)
+            .map_err(|e| format!("Failed to read folder: {}", e))?
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_dir())
+            .any(|dir_entry| {
+                find_model_file_recursive(&dir_entry.path(), MAX_MODEL_SEARCH_DEPTH).is_some()
+            });
+
+        if !has_model_nested {
+            return Err("No Live2D model (.model3.json) found in folder".to_string());
+        }
+    }
+
+    // Reset zoom to 100% for new model
+    save_overlay_scale_to_file(1.0)?;
+
+    // Emit progress
+    let _ = app.emit(
+        "model-change-progress",
+        json!({ "status": "copying", "message": "Copying model files..." }),
+    );
+
+    // Clear existing models
+    if models_dir.exists() {
+        std::fs::remove_dir_all(&models_dir)
+            .map_err(|e| format!("Failed to clear models directory: {}", e))?;
+    }
+    std::fs::create_dir_all(&models_dir)
+        .map_err(|e| format!("Failed to create models directory: {}", e))?;
+
+    // Copy entire folder to models directory
+    copy_dir_recursive(&source_path, &models_dir)?;
+
+    let _ = app.emit(
+        "model-change-progress",
+        json!({ "status": "detecting", "message": "Detecting model structure..." }),
+    );
+
+    // Detect model structure (reuses existing function)
+    let (folder, model_file, texture_folder) = detect_model_structure(&models_dir)?;
+
+    // Save config with "local:" prefix to indicate local source
+    let config = ModelConfig {
+        url: format!("local:{}", folder_path),
+        folder,
+        model_file,
+        texture_folder,
+    };
+    save_model_config(&config)?;
+
+    let _ = app.emit(
+        "model-change-progress",
+        json!({ "status": "complete", "message": "Model loaded successfully!" }),
+    );
+
+    let _ = app.emit("overlay-scale-reset", json!({ "scale": 1.0 }));
+
+    println!("[load_model_from_folder] Model loaded: {:?}", config);
+
+    Ok(config)
+}
+
+/// Recursively copy a directory
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    for entry in std::fs::read_dir(src).map_err(|e| format!("Failed to read dir: {}", e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            std::fs::create_dir_all(&dst_path)
+                .map_err(|e| format!("Failed to create dir: {}", e))?;
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path)
+                .map_err(|e| format!("Failed to copy file: {}", e))?;
+        }
+    }
+    Ok(())
 }
 
 // ============ API Key Commands ============
@@ -2295,6 +2402,7 @@ fn main() {
             get_model_config,
             change_model,
             reset_model,
+            load_model_from_folder,
             show_overlay,
             hide_overlay,
             toggle_overlay,

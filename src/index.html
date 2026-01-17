@@ -201,6 +201,30 @@
             color: var(--text-primary);
         }
 
+        .character-toggle {
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: white;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: all 0.15s ease;
+            line-height: 1;
+        }
+
+        .character-toggle:hover:not(:disabled) {
+            background: var(--accent-blue-hover);
+        }
+
+        .character-toggle:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         /* Sections */
         .section {
             background: var(--bg-secondary);
@@ -379,12 +403,6 @@
             padding-top: 16px;
             border-top: 1px solid var(--border);
             margin-top: 16px;
-        }
-
-        /* Main action */
-        .main-action {
-            text-align: center;
-            margin-top: 8px;
         }
 
         /* Modals */
@@ -613,6 +631,59 @@
             outline: none;
         }
 
+        /* Model source tabs */
+        .model-source-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .model-tab {
+            flex: 1;
+            padding: 8px 12px;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .model-tab:not(:last-child) {
+            border-right: 1px solid var(--border);
+        }
+
+        .model-tab:hover {
+            background: var(--bg-primary);
+        }
+
+        .model-tab.active {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .folder-picker {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .selected-folder {
+            font-size: 11px;
+            color: var(--text-secondary);
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         /* Audio result */
         .audio-result {
             margin-top: 12px;
@@ -641,6 +712,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
+            margin-bottom: 8px;
             cursor: pointer;
             user-select: none;
         }
@@ -789,6 +861,372 @@
             font-size: 10px;
         }
 
+        /* Tutorial Gallery */
+        .tutorial-gallery {
+            border-top: 1px solid var(--border);
+            margin-top: 16px;
+            padding-top: 16px;
+        }
+
+        .gallery-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .gallery-slides {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .gallery-slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .gallery-slide-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .gallery-slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .gallery-slide-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .gallery-slide-desc {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        /* Key combo layouts */
+        .key-combo {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .key-combo.vertical {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .key-combo-row {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .gallery-key {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--text-primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8);
+            transition: all 0.15s ease;
+        }
+
+        .gallery-key.wide {
+            width: 52px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .gallery-key.animating {
+            transform: translateY(2px);
+            background: linear-gradient(180deg, var(--accent-blue) 0%, #0052cc 100%);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .key-plus {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Overlay preview mockups */
+        .overlay-preview {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            width: 140px;
+            min-height: 90px;
+            flex-shrink: 0;
+        }
+
+        .preview-character {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 120px;
+            object-fit: contain;
+            object-position: 55% center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .preview-character.visible {
+            opacity: 1;
+        }
+
+        /* Taskbar preview for slide 0 */
+        .preview-taskbar {
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 6px;
+            padding: 6px 12px;
+        }
+
+        .preview-taskbar-icons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .preview-taskbar-icon {
+            width: 14px;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        .preview-taskbar-icon.oto-icon {
+            background: linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .preview-taskbar-icon.oto-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .preview-taskbar-icon.oto-icon.clicked {
+            transform: scale(0.85);
+            box-shadow: 0 0 12px rgba(124, 58, 237, 0.6);
+            background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+
+        .preview-frame {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .preview-frame.visible {
+            opacity: 1;
+        }
+
+        .preview-textbox {
+            width: 140px;
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.75);
+            border: none;
+            border-radius: 16px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 9px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .preview-textbox.screenshot-active {
+            box-shadow: 0 0 12px rgba(255, 149, 0, 0.7);
+            border: 1px solid rgba(255, 149, 0, 0.5);
+        }
+
+        .preview-screenshot-badge {
+            position: absolute;
+            top: -6px;
+            right: 4px;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .preview-screenshot-badge.visible {
+            opacity: 1;
+        }
+
+        .preview-history-panel {
+            width: 140px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px;
+            margin-bottom: 6px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .preview-history-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .preview-history-item {
+            font-size: 8px;
+            color: var(--text-secondary);
+            padding: 3px 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preview-history-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .preview-level-indicator {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .preview-level-dash {
+            width: 16px;
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            transition: background 0.2s ease;
+        }
+
+        .preview-level-dash.active {
+            background: var(--accent-blue);
+        }
+
+        .preview-level-pill {
+            font-size: 8px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-left: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .preview-level-pill.all {
+            background: rgba(0,0,0,0.08);
+            color: var(--text-secondary);
+        }
+
+        .preview-level-pill.character {
+            background: rgba(57,197,187,0.15);
+            color: #2a9d8f;
+        }
+
+        .preview-level-pill.deep {
+            background: rgba(138,43,226,0.15);
+            color: #7b2cbf;
+        }
+
+        /* Gallery navigation dots */
+        .gallery-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .gallery-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .gallery-dot:hover {
+            background: var(--text-muted);
+        }
+
+        .gallery-dot.active {
+            background: var(--accent-blue);
+        }
+
+        /* Dark mode gallery styles */
+        [data-theme="dark"] .gallery-key {
+            background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        [data-theme="dark"] .gallery-key.animating {
+            background: linear-gradient(180deg, var(--accent-blue) 0%, #0052cc 100%);
+            color: white;
+        }
+
+        [data-theme="dark"] .preview-textbox.screenshot-active {
+            border-color: #ff9500;
+            box-shadow: 0 0 6px rgba(255, 149, 0, 0.4);
+        }
+
+        [data-theme="dark"] .preview-level-pill.all {
+            background: rgba(255,255,255,0.15);
+            color: var(--text-secondary);
+        }
+
+        [data-theme="dark"] .preview-level-pill.character {
+            background: rgba(57,197,187,0.3);
+            color: #39c5bb;
+        }
+
+        [data-theme="dark"] .preview-level-pill.deep {
+            background: rgba(138,43,226,0.3);
+            color: #dda0dd;
+        }
+
         /* Collapsible Sections */
         .section.collapsible {
             padding: 0;
@@ -837,6 +1275,7 @@
     <div class="header">
         <div class="logo">Oto Desktop</div>
         <div class="header-right">
+            <button class="character-toggle" id="characterToggleBtn" title="Show/Hide Character" disabled>Show Character</button>
             <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode"></button>
             <div class="status">
                 <span class="status-dot" id="statusDot"></span>
@@ -853,61 +1292,131 @@
         </div>
         <div class="tutorial-content">
             <div class="tutorial-step">
-                <div class="tutorial-step-title">1. Open Chat</div>
+                <div class="tutorial-step-title">1. API Key</div>
                 <div class="tutorial-step-desc">
-                    Press <span class="shortcut"><kbd>⌥</kbd> + <kbd>Space</kbd></span> to open the chat input
+                    Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>
                 </div>
             </div>
 
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">2. Toggle Screenshots</div>
-                <div class="tutorial-step-desc">
-                    Press <kbd>Tab</kbd> to toggle whether screenshots are attached to your messages
-                </div>
-            </div>
-
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">3. Navigate History</div>
-                <div class="tutorial-step-desc">Press <kbd>↑</kbd> to open history, <kbd>↓</kbd> to close</div>
-                <div class="keyboard-demo">
-                    <div class="key-row">
-                        <div class="key highlight">↑</div>
-                    </div>
-                    <div class="key-row">
-                        <div class="key">←</div>
-                        <div class="key highlight">↓</div>
-                        <div class="key">→</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">4. Switch Context Levels</div>
-                <div class="tutorial-step-desc">Use <kbd>←</kbd> <kbd>→</kbd> arrows to switch between:</div>
-                <div class="level-demo">
-                    <span class="level-pill all">All</span>
-                    <span class="level-pill character">Character</span>
-                    <span class="level-pill deep">Deep Think</span>
-                </div>
-                <div class="tutorial-step-desc" style="margin-top: 8px;">
-                    <strong>All:</strong> Full ChatGPT responses<br>
-                    <strong>Character:</strong> Miku commentary only<br>
-                    <strong>Deep Think:</strong> AI insights (6hr cooldown)
-                </div>
-            </div>
-
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">5. Permissions</div>
+            <div class="tutorial-step" id="permissionsStep">
+                <div class="tutorial-step-title">2. Permissions</div>
                 <div class="tutorial-step-desc">
                     Grant Screen Recording permission in<br>
                     System Settings → Privacy → Screen Recording
                 </div>
             </div>
 
-            <div class="tutorial-step">
-                <div class="tutorial-step-title">6. API Key</div>
-                <div class="tutorial-step-desc">
-                    Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>
+            <!-- Animated Keyboard Shortcuts Gallery -->
+            <div class="tutorial-gallery" id="tutorialGallery">
+                <div class="gallery-title">Tips & Shortcuts</div>
+                <div class="gallery-slides" id="gallerySlides">
+                    <!-- Slide 0: Summon/Hide Character -->
+                    <div class="gallery-slide active" data-slide="0">
+                        <div class="overlay-preview">
+                            <img src="assets/hiyori.png" class="preview-character" id="previewCharacter" alt="Character">
+                            <div class="preview-taskbar">
+                                <div class="preview-taskbar-icons">
+                                    <div class="preview-taskbar-icon"></div>
+                                    <div class="preview-taskbar-icon"></div>
+                                    <div class="preview-taskbar-icon oto-icon" id="previewOtoIcon">○</div>
+                                    <div class="preview-taskbar-icon"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="gallery-slide-right">
+                            <div class="gallery-slide-title">Summon / Hide Character</div>
+                            <div class="gallery-slide-desc">Click the Oto icon in the<br>menu bar (Mac) or system tray (Windows)</div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 1: Open/Close Chat -->
+                    <div class="gallery-slide" data-slide="1">
+                        <div class="overlay-preview">
+                            <div class="preview-frame" id="previewFrame0">
+                                <div class="preview-textbox">Type a message...</div>
+                            </div>
+                        </div>
+                        <div class="gallery-slide-right">
+                            <div class="gallery-slide-title">Open / Close Chat</div>
+                            <div class="key-combo">
+                                <div class="gallery-key wide" id="keyOpt">⌥</div>
+                                <span class="key-plus">+</span>
+                                <div class="gallery-key wide" id="keySpace">Space</div>
+                            </div>
+                            <div class="gallery-slide-desc">Toggle the chat overlay</div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 2: Toggle Screenshots -->
+                    <div class="gallery-slide" data-slide="2">
+                        <div class="overlay-preview">
+                            <div class="preview-frame visible" id="previewFrame1">
+                                <div class="preview-textbox" id="previewTextbox1">Type a message...</div>
+                                <span class="preview-screenshot-badge" id="previewBadge1">📷</span>
+                            </div>
+                        </div>
+                        <div class="gallery-slide-right">
+                            <div class="gallery-slide-title">Toggle Screenshots</div>
+                            <div class="key-combo">
+                                <div class="gallery-key wide" id="keyTab">Tab</div>
+                            </div>
+                            <div class="gallery-slide-desc">Attach/detach screenshots to messages</div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 3: Navigate History -->
+                    <div class="gallery-slide" data-slide="3">
+                        <div class="overlay-preview">
+                            <div class="preview-history-panel" id="previewHistory2">
+                                <div class="preview-history-item">How do I use React?</div>
+                                <div class="preview-history-item">What is TypeScript?</div>
+                                <div class="preview-history-item">Explain async/await</div>
+                            </div>
+                            <div class="preview-frame visible">
+                                <div class="preview-textbox">Type a message...</div>
+                            </div>
+                        </div>
+                        <div class="gallery-slide-right">
+                            <div class="gallery-slide-title">Navigate History</div>
+                            <div class="key-combo vertical">
+                                <div class="gallery-key" id="keyUp">↑</div>
+                                <div class="gallery-key" id="keyDown">↓</div>
+                            </div>
+                            <div class="gallery-slide-desc">↑ opens history, ↓ closes</div>
+                        </div>
+                    </div>
+
+                    <!-- Slide 4: Switch Levels -->
+                    <div class="gallery-slide" data-slide="4">
+                        <div class="overlay-preview">
+                            <div class="preview-level-indicator" id="previewLevel3">
+                                <div class="preview-level-dash active" id="levelDash0"></div>
+                                <div class="preview-level-dash" id="levelDash1"></div>
+                                <div class="preview-level-dash" id="levelDash2"></div>
+                                <span class="preview-level-pill all" id="levelPill">All</span>
+                            </div>
+                            <div class="preview-frame visible">
+                                <div class="preview-textbox">Type a message...</div>
+                            </div>
+                        </div>
+                        <div class="gallery-slide-right">
+                            <div class="gallery-slide-title">Switch Context Levels</div>
+                            <div class="key-combo">
+                                <div class="gallery-key" id="keyLeft">←</div>
+                                <div class="gallery-key" id="keyRight">→</div>
+                            </div>
+                            <div class="gallery-slide-desc">All → Character → Deep Think</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Dots -->
+                <div class="gallery-dots" id="galleryDots">
+                    <div class="gallery-dot active" data-dot="0"></div>
+                    <div class="gallery-dot" data-dot="1"></div>
+                    <div class="gallery-dot" data-dot="2"></div>
+                    <div class="gallery-dot" data-dot="3"></div>
+                    <div class="gallery-dot" data-dot="4"></div>
                 </div>
             </div>
         </div>
@@ -937,17 +1446,32 @@
             <span class="section-toggle">▼</span>
         </div>
         <div class="section-content">
-            <div class="form-group">
-                <div class="form-label">Live2D Model URL</div>
-                <input type="text" id="modelUrlInput" placeholder="https://example.com/model.zip" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 11px;" />
+            <div class="model-source-tabs">
+                <button class="model-tab active" data-source="url">URL</button>
+                <button class="model-tab" data-source="folder">Local Folder</button>
+            </div>
+
+            <!-- URL input (existing) -->
+            <div class="model-source-content" id="urlSource">
+                <input type="text" id="modelUrlInput" placeholder="https://example.com/model.zip" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-family: inherit; font-size: 11px; background: var(--bg-primary); color: var(--text-primary);" />
                 <div class="form-hint">URL to a .zip file containing a Live2D Cubism model</div>
             </div>
-            <div id="currentModelInfo" style="margin: 12px 0; padding: 8px; background: var(--bg-primary); border-radius: 4px; font-size: 11px;">
-                <div style="color: var(--text-muted);">Current model: <span id="currentModelName" style="color: var(--text-primary);">Loading...</span></div>
+
+            <!-- Folder picker (new) -->
+            <div class="model-source-content" id="folderSource" style="display: none;">
+                <div class="folder-picker">
+                    <button class="btn btn-outline btn-sm" id="selectFolderBtn">Select Folder...</button>
+                    <span class="selected-folder" id="selectedFolderPath">No folder selected</span>
+                </div>
+                <div class="form-hint">Select a folder containing a Live2D Cubism model (.model3.json)</div>
             </div>
+
             <div class="form-row" style="gap: 8px;">
                 <button class="btn btn-sm" id="applyModelBtn">Apply</button>
                 <button class="btn btn-outline btn-sm" id="resetModelBtn">Reset to Default</button>
+            </div>
+            <div id="currentModelInfo" style="margin: 12px 0; padding: 8px; background: var(--bg-primary); border-radius: 4px; font-size: 11px;">
+                <div style="color: var(--text-muted);">Current model: <span id="currentModelName" style="color: var(--text-primary);">Loading...</span></div>
             </div>
             <div id="modelProgress" style="display: none; margin-top: 12px; padding: 8px; background: var(--bg-primary); border-radius: 4px; font-size: 11px;">
                 <span id="modelProgressText">Downloading...</span>
@@ -1027,10 +1551,6 @@
                 <button class="btn btn-outline btn-sm" id="historyBtn">Chat History</button>
                 <button class="btn btn-outline btn-sm" id="screenshotsBtn">Screenshots</button>
             </div>
-            <div class="danger-zone">
-                <button class="btn btn-danger btn-sm" id="clearDataBtn">Clear All Data</button>
-                <div class="form-hint">Deletes history, API key, and all settings</div>
-            </div>
         </div>
     </div>
 
@@ -1079,9 +1599,18 @@
         </div>
     </div>
 
-    <!-- Main Action -->
-    <div class="main-action">
-        <button class="btn btn-primary btn-lg" id="spawnBtn" disabled>Spawn Character</button>
+    <!-- Reset Everything Section -->
+    <div class="section collapsible" id="resetSection">
+        <div class="section-header">
+            <div class="section-label">Reset Everything</div>
+            <span class="section-toggle">▼</span>
+        </div>
+        <div class="section-content">
+            <div class="danger-zone">
+                <button class="btn btn-danger btn-sm" id="clearDataBtn">Clear All Data</button>
+                <div class="form-hint">Deletes history, API key, and all settings</div>
+            </div>
+        </div>
     </div>
 
     <!-- Toast Container -->
@@ -1120,7 +1649,7 @@
 
         // Theme toggle functionality
         const themeToggle = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedTheme = localStorage.getItem('theme') || 'dark';
         document.documentElement.setAttribute('data-theme', savedTheme);
         updateThemeIcon();
 
@@ -1153,7 +1682,7 @@
         const historyBtn = document.getElementById('historyBtn');
         const screenshotsBtn = document.getElementById('screenshotsBtn');
         const clearDataBtn = document.getElementById('clearDataBtn');
-        const spawnBtn = document.getElementById('spawnBtn');
+        const characterToggleBtn = document.getElementById('characterToggleBtn');
         const toastContainer = document.getElementById('toast-container');
         const clearModal = document.getElementById('clearModal');
         const clearCancelBtn = document.getElementById('clearCancelBtn');
@@ -1193,8 +1722,15 @@
             localStorage.setItem('tutorialCollapsed', tutorialSection.classList.contains('collapsed'));
         });
 
+        // Hide permissions step on non-Mac platforms
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const permissionsStep = document.getElementById('permissionsStep');
+        if (permissionsStep && !isMac) {
+            permissionsStep.style.display = 'none';
+        }
+
         // Collapsible sections toggle
-        const collapsibleSections = ['apiSection', 'promptsSection', 'dataSection', 'characterSection'];
+        const collapsibleSections = ['apiSection', 'promptsSection', 'dataSection', 'characterSection', 'resetSection'];
 
         collapsibleSections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
@@ -1296,9 +1832,9 @@
             }
         }
 
-        // Button text update
+        // Button state update
         function updateSpawnButton() {
-            spawnBtn.textContent = isOverlayVisible ? 'Hide Character' : 'Spawn Character';
+            characterToggleBtn.textContent = isOverlayVisible ? 'Hide Character' : 'Show Character';
         }
 
         // Markdown parser (same as overlay)
@@ -1379,7 +1915,7 @@
                 hasApiKey = true;
                 apiKeyRow.style.display = 'none';
                 apiKeySaved.style.display = 'flex';
-                spawnBtn.disabled = false;
+                characterToggleBtn.disabled = false;
                 showToast('API key saved', 'success');
 
                 setTimeout(async () => {
@@ -1391,10 +1927,61 @@
         });
 
         // Model section handlers
+        const modelTabs = document.querySelectorAll('.model-tab');
+        const urlSource = document.getElementById('urlSource');
+        const folderSource = document.getElementById('folderSource');
+        const selectFolderBtn = document.getElementById('selectFolderBtn');
+        const selectedFolderPath = document.getElementById('selectedFolderPath');
+        let currentFolderPath = null;
+
+        // Model source tab switching
+        modelTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                modelTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                if (tab.dataset.source === 'url') {
+                    urlSource.style.display = 'block';
+                    folderSource.style.display = 'none';
+                } else {
+                    urlSource.style.display = 'none';
+                    folderSource.style.display = 'block';
+                }
+            });
+        });
+
+        // Folder selection
+        selectFolderBtn.addEventListener('click', async () => {
+            const { open } = window.__TAURI__.dialog;
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: 'Select Live2D Model Folder'
+            });
+
+            if (selected) {
+                currentFolderPath = selected;
+                // Show just the folder name
+                selectedFolderPath.textContent = selected.split(/[/\\]/).pop();
+            }
+        });
+
         async function loadModelConfig() {
             try {
                 const config = await invoke('get_model_config');
-                modelUrlInput.value = config.url;
+                // Handle local: prefix for folder-loaded models
+                if (config.url.startsWith('local:')) {
+                    const localPath = config.url.substring(6);
+                    currentFolderPath = localPath;
+                    selectedFolderPath.textContent = localPath.split(/[/\\]/).pop();
+                    // Switch to folder tab
+                    modelTabs.forEach(t => t.classList.remove('active'));
+                    document.querySelector('.model-tab[data-source="folder"]').classList.add('active');
+                    urlSource.style.display = 'none';
+                    folderSource.style.display = 'block';
+                } else {
+                    modelUrlInput.value = config.url;
+                }
                 currentModelName.textContent = config.folder;
             } catch (err) {
                 console.error('Failed to load model config:', err);
@@ -1403,23 +1990,42 @@
         }
 
         applyModelBtn.addEventListener('click', async () => {
-            const url = modelUrlInput.value.trim();
-            if (!url) {
-                showToast('Please enter a model URL', 'error');
-                return;
-            }
-            if (!url.endsWith('.zip')) {
-                showToast('URL must point to a .zip file', 'error');
-                return;
+            const activeTab = document.querySelector('.model-tab.active');
+            const isUrlMode = !activeTab || activeTab.dataset.source === 'url';
+
+            // Validate before disabling buttons
+            if (isUrlMode) {
+                const url = modelUrlInput.value.trim();
+                if (!url) {
+                    showToast('Please enter a model URL', 'error');
+                    return;
+                }
+                if (!url.endsWith('.zip')) {
+                    showToast('URL must point to a .zip file', 'error');
+                    return;
+                }
+            } else {
+                if (!currentFolderPath) {
+                    showToast('Please select a folder first', 'error');
+                    return;
+                }
             }
 
             applyModelBtn.disabled = true;
             resetModelBtn.disabled = true;
             modelProgress.style.display = 'block';
-            modelProgressText.textContent = 'Downloading model...';
 
             try {
-                const config = await invoke('change_model', { url });
+                let config;
+
+                if (isUrlMode) {
+                    modelProgressText.textContent = 'Downloading model...';
+                    config = await invoke('change_model', { url: modelUrlInput.value.trim() });
+                } else {
+                    modelProgressText.textContent = 'Loading model...';
+                    config = await invoke('load_model_from_folder', { folderPath: currentFolderPath });
+                }
+
                 currentModelName.textContent = config.folder;
                 showToast('Model changed to ' + config.folder, 'success');
 
@@ -1500,7 +2106,7 @@
         });
 
         // Spawn/Hide character
-        spawnBtn.addEventListener('click', async () => {
+        characterToggleBtn.addEventListener('click', async () => {
             try {
                 const nowVisible = await invoke('toggle_overlay');
                 isOverlayVisible = nowVisible;
@@ -1619,7 +2225,7 @@
                 dialoguePromptInput.value = '';
                 deepResearchPromptInput.value = '';
                 hasApiKey = false;
-                spawnBtn.disabled = true;
+                characterToggleBtn.disabled = true;
                 setStatus('data cleared');
             } catch (err) {
                 showToast('Failed to clear data: ' + err, 'error');
@@ -1716,9 +2322,9 @@
                 if (!hasPermission) {
                     setStatus('permission required');
                     showToast('Screen recording permission required', 'error');
-                    spawnBtn.textContent = 'Open Settings';
-                    spawnBtn.disabled = false;
-                    spawnBtn.onclick = async () => {
+                    characterToggleBtn.textContent = 'Open Settings';
+                    characterToggleBtn.disabled = false;
+                    characterToggleBtn.onclick = async () => {
                         await invoke('open_screen_recording_settings');
                     };
                     return;
@@ -1726,7 +2332,7 @@
 
                 // All good - spawn character
                 setStatus('ready');
-                spawnBtn.disabled = !hasApiKey;
+                characterToggleBtn.disabled = !hasApiKey;
 
                 if (hasApiKey) {
                     await emit('init-complete', {});
@@ -1759,6 +2365,321 @@
         });
 
         init();
+
+        // Tutorial Gallery Animation System
+        (function() {
+            const GalleryState = {
+                currentSlide: 0,
+                autoAdvanceInterval: null,
+                slideDuration: 1500,
+                loopCount: 0,
+                maxLoops: 4
+            };
+
+            const slides = document.querySelectorAll('.gallery-slide');
+            const dots = document.querySelectorAll('.gallery-dot');
+            const galleryContainer = document.getElementById('tutorialGallery');
+
+            if (!galleryContainer || slides.length === 0) return;
+
+            function goToSlide(index) {
+                // Wrap around
+                if (index < 0) index = slides.length - 1;
+                if (index >= slides.length) index = 0;
+
+                // Reset loop counter when changing slides
+                GalleryState.loopCount = 0;
+
+                // Update slides
+                slides.forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+
+                // Update dots
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === index);
+                });
+
+                GalleryState.currentSlide = index;
+
+                // Trigger slide-specific animation
+                setTimeout(() => {
+                    // Slide 4 uses 4 phases (1/2/3/2/1 pattern), others use 2 phases
+                    const phase = (index === 4) ? GalleryState.loopCount : (GalleryState.loopCount % 2);
+                    switch (index) {
+                        case 0: animateTaskbarClick(phase); break;
+                        case 1: animateOpenChat(phase); break;
+                        case 2: animateToggleScreenshots(phase); break;
+                        case 3: animateNavigateHistory(phase); break;
+                        case 4: animateSwitchLevels(phase); break;
+                    }
+                }, 100);
+
+                // Restart interval to sync with this slide
+                startAutoAdvance();
+            }
+
+            function nextSlide() {
+                goToSlide(GalleryState.currentSlide + 1);
+            }
+
+            function prevSlide() {
+                goToSlide(GalleryState.currentSlide - 1);
+            }
+
+            // Slide 0: Taskbar Click Animation
+            function animateTaskbarClick(phase = 0) {
+                const otoIcon = document.getElementById('previewOtoIcon');
+                const character = document.getElementById('previewCharacter');
+                if (!otoIcon) return;
+
+                // Reset
+                otoIcon.classList.remove('clicked');
+
+                if (phase === 0) {
+                    // Phase 0: First click - character appears
+                    setTimeout(() => {
+                        otoIcon.classList.add('clicked');
+                    }, 400);
+
+                    setTimeout(() => {
+                        otoIcon.classList.remove('clicked');
+                        if (character) character.classList.add('visible');
+                    }, 600);
+                } else {
+                    // Phase 1: Second click - character disappears
+                    setTimeout(() => {
+                        otoIcon.classList.add('clicked');
+                    }, 400);
+
+                    setTimeout(() => {
+                        otoIcon.classList.remove('clicked');
+                        if (character) character.classList.remove('visible');
+                    }, 600);
+                }
+            }
+
+            // Slide 1: Open Chat Animation
+            function animateOpenChat(phase = 0) {
+                const keyOpt = document.getElementById('keyOpt');
+                const keySpace = document.getElementById('keySpace');
+                const previewFrame = document.getElementById('previewFrame0');
+
+                // Reset
+                keyOpt.classList.remove('animating');
+                keySpace.classList.remove('animating');
+
+                if (phase === 0) {
+                    // Phase 0: Open chat
+                    setTimeout(() => {
+                        keyOpt.classList.add('animating');
+                        keySpace.classList.add('animating');
+                    }, 400);
+
+                    setTimeout(() => {
+                        keyOpt.classList.remove('animating');
+                        keySpace.classList.remove('animating');
+                        previewFrame.classList.add('visible');
+                    }, 700);
+                } else {
+                    // Phase 1: Close chat
+                    setTimeout(() => {
+                        keyOpt.classList.add('animating');
+                        keySpace.classList.add('animating');
+                    }, 400);
+
+                    setTimeout(() => {
+                        keyOpt.classList.remove('animating');
+                        keySpace.classList.remove('animating');
+                        previewFrame.classList.remove('visible');
+                    }, 700);
+                }
+            }
+
+            // Slide 2: Toggle Screenshots Animation
+            function animateToggleScreenshots(phase = 0) {
+                const keyTab = document.getElementById('keyTab');
+                const previewBadge = document.getElementById('previewBadge1');
+                const previewTextbox = document.getElementById('previewTextbox1');
+
+                // Reset
+                keyTab.classList.remove('animating');
+
+                if (phase === 0) {
+                    // Phase 0: Enable screenshots
+                    setTimeout(() => {
+                        keyTab.classList.add('animating');
+                    }, 400);
+
+                    setTimeout(() => {
+                        keyTab.classList.remove('animating');
+                        previewBadge.classList.add('visible');
+                        previewTextbox.classList.add('screenshot-active');
+                    }, 700);
+                } else {
+                    // Phase 1: Disable screenshots
+                    setTimeout(() => {
+                        keyTab.classList.add('animating');
+                    }, 400);
+
+                    setTimeout(() => {
+                        keyTab.classList.remove('animating');
+                        previewBadge.classList.remove('visible');
+                        previewTextbox.classList.remove('screenshot-active');
+                    }, 700);
+                }
+            }
+
+            // Slide 3: Navigate History Animation
+            function animateNavigateHistory(phase = 0) {
+                const keyUp = document.getElementById('keyUp');
+                const keyDown = document.getElementById('keyDown');
+                const previewHistory = document.getElementById('previewHistory2');
+
+                // Reset
+                keyUp.classList.remove('animating');
+                keyDown.classList.remove('animating');
+
+                if (phase === 0) {
+                    // Phase 0: Press Up - open history
+                    setTimeout(() => {
+                        keyUp.classList.add('animating');
+                    }, 300);
+
+                    setTimeout(() => {
+                        keyUp.classList.remove('animating');
+                        previewHistory.classList.add('visible');
+                    }, 600);
+                } else {
+                    // Phase 1: Press Down - close history
+                    setTimeout(() => {
+                        keyDown.classList.add('animating');
+                    }, 300);
+
+                    setTimeout(() => {
+                        keyDown.classList.remove('animating');
+                        previewHistory.classList.remove('visible');
+                    }, 600);
+                }
+            }
+
+            // Slide 4: Switch Levels Animation
+            function animateSwitchLevels(phase = 0) {
+                const keyLeft = document.getElementById('keyLeft');
+                const keyRight = document.getElementById('keyRight');
+                const levelDash0 = document.getElementById('levelDash0');
+                const levelDash1 = document.getElementById('levelDash1');
+                const levelDash2 = document.getElementById('levelDash2');
+                const levelPill = document.getElementById('levelPill');
+
+                const levels = [
+                    { dash: 0, text: 'All', className: 'all' },
+                    { dash: 1, text: 'Character', className: 'character' },
+                    { dash: 2, text: 'Deep Think', className: 'deep' }
+                ];
+
+                function setLevel(index) {
+                    const level = levels[index];
+                    levelDash0.classList.toggle('active', level.dash === 0);
+                    levelDash1.classList.toggle('active', level.dash === 1);
+                    levelDash2.classList.toggle('active', level.dash === 2);
+                    levelPill.textContent = level.text;
+                    levelPill.className = 'preview-level-pill ' + level.className;
+                }
+
+                // Reset
+                keyLeft.classList.remove('animating');
+                keyRight.classList.remove('animating');
+
+                // 1/2/3/2/1 pattern: 4 phases cycling through all 3 levels
+                if (phase === 0) {
+                    // Phase 0: Press Right - move 0 -> 1
+                    setLevel(0);
+                    setTimeout(() => keyRight.classList.add('animating'), 400);
+                    setTimeout(() => {
+                        keyRight.classList.remove('animating');
+                        setLevel(1);
+                    }, 700);
+                } else if (phase === 1) {
+                    // Phase 1: Press Right - move 1 -> 2
+                    setLevel(1);
+                    setTimeout(() => keyRight.classList.add('animating'), 400);
+                    setTimeout(() => {
+                        keyRight.classList.remove('animating');
+                        setLevel(2);
+                    }, 700);
+                } else if (phase === 2) {
+                    // Phase 2: Press Left - move 2 -> 1
+                    setLevel(2);
+                    setTimeout(() => keyLeft.classList.add('animating'), 400);
+                    setTimeout(() => {
+                        keyLeft.classList.remove('animating');
+                        setLevel(1);
+                    }, 700);
+                } else {
+                    // Phase 3: Press Left - move 1 -> 0
+                    setLevel(1);
+                    setTimeout(() => keyLeft.classList.add('animating'), 400);
+                    setTimeout(() => {
+                        keyLeft.classList.remove('animating');
+                        setLevel(0);
+                    }, 700);
+                }
+            }
+
+            function startAutoAdvance() {
+                stopAutoAdvance();
+                GalleryState.autoAdvanceInterval = setInterval(() => {
+                    GalleryState.loopCount++;
+                    if (GalleryState.loopCount >= GalleryState.maxLoops) {
+                        nextSlide();
+                    } else {
+                        // Re-run current animation
+                        const index = GalleryState.currentSlide;
+                        // Slide 4 uses 4 phases (1/2/3/2/1 pattern), others use 2 phases
+                        const phase = (index === 4) ? GalleryState.loopCount : (GalleryState.loopCount % 2);
+                        switch (index) {
+                            case 0: animateTaskbarClick(phase); break;
+                            case 1: animateOpenChat(phase); break;
+                            case 2: animateToggleScreenshots(phase); break;
+                            case 3: animateNavigateHistory(phase); break;
+                            case 4: animateSwitchLevels(phase); break;
+                        }
+                    }
+                }, GalleryState.slideDuration);
+            }
+
+            function stopAutoAdvance() {
+                if (GalleryState.autoAdvanceInterval) {
+                    clearInterval(GalleryState.autoAdvanceInterval);
+                    GalleryState.autoAdvanceInterval = null;
+                }
+            }
+
+            // Dot click handlers
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    goToSlide(index);
+                });
+            });
+
+            // Keyboard navigation with arrow keys
+            document.addEventListener('keydown', (e) => {
+                // Only respond if gallery is visible/in viewport
+                const rect = galleryContainer.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+                if (!isVisible) return;
+
+                if (e.key === 'ArrowLeft') {
+                    prevSlide();
+                } else if (e.key === 'ArrowRight') {
+                    nextSlide();
+                }
+            });
+
+            // Start the gallery
+            goToSlide(0);
+        })();
     </script>
 </body>
 </html>

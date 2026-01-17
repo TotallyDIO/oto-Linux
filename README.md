@@ -2,6 +2,14 @@
 
 A desktop Live2D character companion with AI chat integration. Oto Desktop creates a transparent overlay with an animated character that can see your screen, have conversations with you, and provide AI-assisted responses.
 
+<div align="center">
+   
+https://github.com/user-attachments/assets/001b865c-987d-4eb4-9187-47205b2d3fdb                                                                      
+
+</div>     
+
+
+
 ## Features
 
 - **Live2D Character Overlay**: Animated character rendered using Live2D Cubism SDK
