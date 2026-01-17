@@ -623,7 +623,17 @@
         const { invoke } = window.__TAURI__.core;
         const { listen } = window.__TAURI__.event;
         const { getCurrentWindow } = window.__TAURI__.window;
-        const { convertFileSrc } = window.__TAURI__.core;
+
+        // Frontend logging helper - logs to both console and Rust log file
+        async function frontendLog(level, ...args) {
+            const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            console[level](message);
+            try {
+                await invoke('log_from_frontend', { level, message });
+            } catch (e) {
+                // Ignore if command not available
+            }
+        }
 
         // Platform detection for keyboard shortcut tooltips
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -640,6 +650,15 @@
         let currentBasePath = null;
         // Global cache buster - updated on each model reload to force fresh texture loading
         window.textureCacheBuster = Date.now();
+
+        // Convert file path to localfile:// URL (bypasses broken asset protocol on Windows)
+        function toLocalFileUrl(filePath) {
+            // Normalize to forward slashes
+            const normalized = filePath.replace(/\\/g, '/');
+            // Encode the path components but keep slashes
+            const encoded = normalized.split('/').map(part => encodeURIComponent(part)).join('/');
+            return `http://localfile.localhost/${encoded}`;
+        }
 
         // ============ Constants ============
         const DEEP_RESEARCH_COOLDOWN_SECONDS = 6 * 60 * 60; // 6 hours
@@ -674,18 +693,25 @@
             if (!currentBasePath || typeof url !== 'string') return url;
 
             // Check if it's an asset URL that needs resolution
-            const assetPrefixes = ['asset://localhost/', 'http://asset.localhost/'];
+            const assetPrefixes = ['asset://localhost/', 'http://asset.localhost/', 'http://localfile.localhost/'];
             for (const prefix of assetPrefixes) {
                 if (url.startsWith(prefix)) {
                     const pathname = url.replace(prefix, '');
-                    if (!pathname.startsWith('%2F')) {
-                        const decoded = decodeURIComponent(pathname);
-                        // Add cache-busting to prevent texture caching
-                        const resolved = convertFileSrc(`${currentBasePath}/${decoded}`) + '?t=' + window.textureCacheBuster;
-                        console.log('[AssetResolve] Resolved:', url.substring(0, 50), '-> cachebuster:', window.textureCacheBuster);
+                    const decoded = decodeURIComponent(pathname);
+
+                    // Check if already an absolute path (Unix / or Windows C:/)
+                    const isAbsolutePath = decoded.startsWith('/') || /^[A-Za-z]:[\\/]/.test(decoded);
+
+                    if (!isAbsolutePath) {
+                        // Relative path - prepend base path and use localfile protocol
+                        const resolved = toLocalFileUrl(`${currentBasePath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                        frontendLog('info', '[AssetResolve] Resolved relative:', decoded, '-> with base:', currentBasePath);
                         return resolved;
                     }
-                    return url;
+                    // Already absolute - convert to localfile URL
+                    const resolved = toLocalFileUrl(decoded) + '?t=' + window.textureCacheBuster;
+                    frontendLog('info', '[AssetResolve] Already absolute path:', decoded.substring(0, 50));
+                    return resolved;
                 }
             }
 
@@ -695,8 +721,8 @@
                 const decoded = decodeURIComponent(pathname);
                 const parentPath = currentBasePath.substring(0, currentBasePath.lastIndexOf('/'));
                 // Add cache-busting to prevent texture caching
-                const resolved = convertFileSrc(`${parentPath}/${decoded}`) + '?t=' + window.textureCacheBuster;
-                console.log('[AssetResolve] Resolved bare asset:', decoded, '-> cachebuster:', window.textureCacheBuster);
+                const resolved = toLocalFileUrl(`${parentPath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                frontendLog('info', '[AssetResolve] Resolved bare asset:', decoded, '-> parent:', parentPath);
                 return resolved;
             }
 
@@ -719,7 +745,9 @@
         const originalImageSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
         Object.defineProperty(HTMLImageElement.prototype, 'src', {
             set: function(url) {
-                return originalImageSrcDescriptor.set.call(this, resolveAssetUrl(url));
+                const resolved = resolveAssetUrl(url);
+                frontendLog('info', '[ImagePatch] Setting image src:', url?.substring?.(0, 80) || url, '-> resolved:', resolved?.substring?.(0, 80) || resolved);
+                return originalImageSrcDescriptor.set.call(this, resolved);
             },
             get: originalImageSrcDescriptor.get,
             configurable: true,
@@ -773,68 +801,69 @@
             }
 
             async loadModel(modelPath, modelFileName) {
-                console.log('[Live2D] loadModel called - starting reload process');
+                frontendLog('info', '[Live2D] loadModel called - starting reload process');
 
                 this.initApp();
 
                 // Update cache buster to force fresh texture loading
                 window.textureCacheBuster = Date.now();
-                console.log('[Live2D] Cache buster updated to:', window.textureCacheBuster);
+                frontendLog('info', '[Live2D] Cache buster updated to:', window.textureCacheBuster);
 
                 // Destroy existing model first
                 if (this.model) {
-                    console.log('[Live2D] Destroying existing model');
+                    frontendLog('info', '[Live2D] Destroying existing model');
                     this.app.stage.removeChild(this.model);
                     this.model.destroy({ children: true, texture: true, baseTexture: true });
                     this.model = null;
                 }
 
                 // Clear PIXI texture cache to force fresh loading
-                console.log('[Live2D] Clearing PIXI texture caches');
+                frontendLog('info', '[Live2D] Clearing PIXI texture caches');
                 if (PIXI.utils && PIXI.utils.TextureCache) {
                     for (const key in PIXI.utils.TextureCache) {
-                        console.log('[Live2D] Removing cached texture:', key);
+                        frontendLog('info', '[Live2D] Removing cached texture:', key);
                         delete PIXI.utils.TextureCache[key];
                     }
                 }
                 if (PIXI.utils && PIXI.utils.BaseTextureCache) {
                     for (const key in PIXI.utils.BaseTextureCache) {
-                        console.log('[Live2D] Removing cached base texture:', key);
+                        frontendLog('info', '[Live2D] Removing cached base texture:', key);
                         PIXI.utils.BaseTextureCache[key].destroy();
                         delete PIXI.utils.BaseTextureCache[key];
                     }
                 }
 
                 try {
+                    // Normalize path separators for cross-platform compatibility
                     let normalizedPath = modelPath.replace(/\\/g, '/');
-                    if (/^[A-Z]:\//.test(normalizedPath) && !normalizedPath.startsWith('//?/')) {
-                        normalizedPath = '//?/' + normalizedPath;
-                    }
 
                     currentBasePath = normalizedPath;
-                    console.log('[Live2D] Current base path:', currentBasePath);
+                    frontendLog('info', '[Live2D] Original model path:', modelPath);
+                    frontendLog('info', '[Live2D] Normalized base path:', currentBasePath);
 
                     const fullPath = `${normalizedPath}/${modelFileName}`;
-                    // Add cache-busting to model URL to prevent caching
-                    const modelUrl = convertFileSrc(fullPath) + '?t=' + window.textureCacheBuster;
+                    frontendLog('info', '[Live2D] Full path before URL conversion:', fullPath);
 
-                    console.log('[Live2D] Loading model from:', modelUrl);
+                    // Use custom localfile:// protocol (bypasses broken asset protocol on Windows)
+                    const modelUrl = toLocalFileUrl(fullPath) + '?t=' + window.textureCacheBuster;
+
+                    frontendLog('info', '[Live2D] Model URL after conversion:', modelUrl);
 
                     this.model = await Live2DModel.from(modelUrl, { autoInteract: false });
-                    console.log('[Live2D] Model.from() completed');
+                    frontendLog('info', '[Live2D] Model.from() completed');
 
                     // Capture original model dimensions BEFORE any scaling
                     this.originalModelWidth = this.model.width;
                     this.originalModelHeight = this.model.height;
-                    console.log('[Live2D] Original model dimensions:', this.originalModelWidth, 'x', this.originalModelHeight);
+                    frontendLog('info', '[Live2D] Original model dimensions:', this.originalModelWidth, 'x', this.originalModelHeight);
 
                     this.app.stage.addChild(this.model);
                     this.resizeModel();
 
-                    console.log('[Live2D] Model loaded successfully!');
+                    frontendLog('info', '[Live2D] Model loaded successfully!');
                     return { width: this.model.width, height: this.model.height };
                 } catch (error) {
-                    console.error('[Live2D] Load failed:', error);
+                    frontendLog('error', '[Live2D] Load failed:', error);
                     currentBasePath = null;
                     throw error;
                 }
@@ -1051,20 +1080,30 @@
 
         async function autoLoadModel() {
             if (modelLoadInProgress) {
-                console.log('[Overlay] Model load already in progress, skipping');
+                frontendLog('info', '[Overlay] Model load already in progress, skipping');
                 return;
             }
             modelLoadInProgress = true;
+            frontendLog('info', '[Overlay] autoLoadModel started');
 
             try {
                 // Get model config for dynamic model loading
+                frontendLog('info', '[Overlay] Fetching model config...');
                 const config = await invoke('get_model_config');
+                frontendLog('info', '[Overlay] Model config:', config);
+
+                frontendLog('info', '[Overlay] Fetching models path...');
                 const modelsPath = await invoke('get_paths');
+                frontendLog('info', '[Overlay] Models path:', modelsPath);
+
                 const modelPath = `${modelsPath}/${config.folder}`;
                 const modelFileName = config.model_file;
 
-                console.log('[Overlay] Auto-loading model:', modelPath, modelFileName);
+                frontendLog('info', '[Overlay] Full model path:', modelPath);
+                frontendLog('info', '[Overlay] Model filename:', modelFileName);
+                frontendLog('info', '[Overlay] Loading model...');
                 await live2dOverlay.loadModel(modelPath, modelFileName);
+                frontendLog('info', '[Overlay] Model loaded successfully!');
 
                 // Load saved transform config
                 try {
@@ -1073,16 +1112,19 @@
                     live2dOverlay.characterOffsetX = transformConfig.offset_x;
                     live2dOverlay.characterOffsetY = transformConfig.offset_y;
                     live2dOverlay.resizeModel();
-                    console.log('[Overlay] Loaded transform config:', transformConfig);
+                    frontendLog('info', '[Overlay] Loaded transform config:', transformConfig);
                 } catch (e) {
-                    console.log('[Overlay] No saved transform config, using defaults');
+                    frontendLog('info', '[Overlay] No saved transform config, using defaults');
                 }
 
                 // Start device listening for head tracking
                 await invoke('start_device_listening');
+                frontendLog('info', '[Overlay] autoLoadModel completed successfully');
             } catch (error) {
-                console.error('[Overlay] Failed to auto-load model:', error);
+                frontendLog('error', '[Overlay] Failed to auto-load model:', error);
+            } finally {
                 modelLoadInProgress = false;
+                frontendLog('info', '[Overlay] modelLoadInProgress reset to false');
             }
         }
 
@@ -2236,13 +2278,13 @@
 
         // Listen for init-complete event from main window
         listen('init-complete', () => {
-            console.log('[Overlay] Init complete - loading model');
+            frontendLog('info', '[Overlay] Init complete - loading model');
             autoLoadModel();
         });
 
         // Listen for reload-character event to hot-reload textures
         listen('reload-character', () => {
-            console.log('[Overlay] Reload character event received - reloading model');
+            frontendLog('info', '[Overlay] Reload character event received - reloading model');
             autoLoadModel();
         });
 
@@ -2250,7 +2292,7 @@
         window.addEventListener('DOMContentLoaded', async () => {
             live2dOverlay.initApp();
             updateTooltips();
-            console.log('[Overlay] Ready - auto-loading model');
+            frontendLog('info', '[Overlay] Ready - auto-loading model');
             // Auto-load model on page load (handles both initial load and reload cases)
             autoLoadModel();
 
@@ -2262,7 +2304,7 @@
                 const isMainVisible = await invoke('is_main_window_visible');
                 document.getElementById('settingsBtn').classList.toggle('active', isMainVisible);
             } catch (e) {
-                console.log('[Overlay] Could not check main window visibility:', e);
+                frontendLog('info', '[Overlay] Could not check main window visibility:', e);
             }
         });
 

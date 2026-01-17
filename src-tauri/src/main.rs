@@ -23,8 +23,10 @@ use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
 use tauri::{command, AppHandle, Emitter, Manager};
+use tauri::http::{Request, Response};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 // rusqlite is now used in db.rs module
+use log::{error, info, warn};
 use serde::Deserialize;
 
 // macOS-specific imports
@@ -416,7 +418,9 @@ async fn init_app(app: AppHandle) -> Result<InitStatus, String> {
 #[command]
 async fn get_paths() -> Result<String, String> {
     let models_dir = get_models_dir()?;
-    Ok(models_dir.to_string_lossy().to_string())
+    let path_str = models_dir.to_string_lossy().to_string();
+    info!("[get_paths] Models directory: {}", path_str);
+    Ok(path_str)
 }
 
 #[command]
@@ -444,7 +448,12 @@ async fn is_initialized() -> Result<bool, String> {
 
 #[command]
 async fn get_model_config() -> Result<ModelConfig, String> {
-    load_model_config()
+    let config = load_model_config()?;
+    info!(
+        "[get_model_config] Loaded config - folder: {}, model_file: {}",
+        config.folder, config.model_file
+    );
+    Ok(config)
 }
 
 #[command]
@@ -620,16 +629,25 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 
 #[command]
 async fn save_api_key(key: String) -> Result<(), String> {
+    info!("[save_api_key] Starting to save API key");
     let key_path = get_api_key_path()?;
+    info!("[save_api_key] Key path: {:?}", key_path);
 
     // Ensure parent directory exists
     if let Some(parent) = key_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create directory: {}", e))?;
+        info!("[save_api_key] Creating parent directory: {:?}", parent);
+        std::fs::create_dir_all(parent).map_err(|e| {
+            error!("[save_api_key] Failed to create directory: {}", e);
+            format!("Failed to create directory: {}", e)
+        })?;
     }
 
-    std::fs::write(&key_path, &key).map_err(|e| format!("Failed to save API key: {}", e))?;
+    std::fs::write(&key_path, &key).map_err(|e| {
+        error!("[save_api_key] Failed to save API key: {}", e);
+        format!("Failed to save API key: {}", e)
+    })?;
 
+    info!("[save_api_key] API key saved successfully");
     Ok(())
 }
 
@@ -783,6 +801,17 @@ async fn get_dialogue_prompt() -> Result<String, String> {
         }
     } else {
         Ok(DEFAULT_DIALOGUE_PROMPT.to_string())
+    }
+}
+
+// ============ Frontend Logging ============
+
+#[command]
+fn log_from_frontend(level: String, message: String) {
+    match level.as_str() {
+        "error" => error!("[Frontend] {}", message),
+        "warn" => warn!("[Frontend] {}", message),
+        _ => info!("[Frontend] {}", message),
     }
 }
 
@@ -1145,7 +1174,7 @@ async fn trigger_deep_research() -> Result<DeepResearchResponse, String> {
 
     if !response.status().is_success() {
         let error_text = response.text().await.unwrap_or_default();
-        eprintln!("[DeepResearch] API error: {}", error_text);
+        error!("[DeepResearch] API error: {}", error_text);
         return Err(format!("API request failed: {}", error_text));
     }
 
@@ -1669,7 +1698,7 @@ fn configure_overlay(window: &tauri::WebviewWindow) -> Result<(), String> {
         .map_err(|e| format!("Failed to get HWND: {}", e))?;
     unsafe {
         SetWindowPos(
-            HWND(hwnd.0 as *mut std::ffi::c_void),
+            HWND(hwnd.0),
             HWND_TOPMOST,
             0,
             0,
@@ -1689,7 +1718,9 @@ fn configure_overlay(_window: &tauri::WebviewWindow) -> Result<(), String> {
 
 #[command]
 async fn show_overlay(app: AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
+    info!("show_overlay called");
     if let Some(window) = app.get_webview_window("overlay") {
+        info!("show_overlay: overlay window found");
         configure_overlay(&window)?;
 
         // Position in bottom right of screen
@@ -1701,10 +1732,12 @@ async fn show_overlay(app: AppHandle, state: tauri::State<'_, AppState>) -> Resu
                 let y = screen_pos.y + (screen_size.height as i32) - (window_size.height as i32);
                 let _ = window
                     .set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
+                info!("show_overlay: positioned at ({}, {})", x, y);
             }
         }
 
         window.show().map_err(|e| e.to_string())?;
+        info!("show_overlay: window.show() completed");
         window.set_focus().map_err(|e| e.to_string())?;
 
         // Update state
@@ -1717,6 +1750,9 @@ async fn show_overlay(app: AppHandle, state: tauri::State<'_, AppState>) -> Resu
 
         // Emit event
         let _ = app.emit("overlay-visibility-changed", json!({ "visible": true }));
+        info!("show_overlay: completed successfully");
+    } else {
+        info!("show_overlay: overlay window NOT found");
     }
     Ok(())
 }
@@ -1865,12 +1901,20 @@ async fn get_overlay_scale() -> Result<f64, String> {
 
 #[command]
 async fn hide_main_window(app: AppHandle) -> Result<(), String> {
+    info!("[hide_main_window] Attempting to hide main window");
     if let Some(window) = app.get_webview_window("main") {
-        window.hide().map_err(|e| e.to_string())?;
+        window.hide().map_err(|e| {
+            error!("[hide_main_window] Failed to hide window: {}", e);
+            e.to_string()
+        })?;
+        info!("[hide_main_window] Window hidden, emitting event");
         let _ = app.emit(
             "main-window-visibility-changed",
             json!({ "visible": false }),
         );
+        info!("[hide_main_window] Event emitted successfully");
+    } else {
+        warn!("[hide_main_window] Main window not found");
     }
     Ok(())
 }
@@ -2099,7 +2143,7 @@ async fn take_screenshot(app: AppHandle) -> Result<String, String> {
 
             let bitmap = CreateCompatibleBitmap(screen_dc, width, height);
             if bitmap.is_invalid() {
-                DeleteDC(mem_dc);
+                let _ = DeleteDC(mem_dc);
                 ReleaseDC(None, screen_dc);
                 return Err("Failed to create bitmap".to_string());
             }
@@ -2141,8 +2185,8 @@ async fn take_screenshot(app: AppHandle) -> Result<String, String> {
 
             // Cleanup GDI objects
             SelectObject(mem_dc, old_bitmap);
-            DeleteObject(bitmap);
-            DeleteDC(mem_dc);
+            let _ = DeleteObject(bitmap);
+            let _ = DeleteDC(mem_dc);
             ReleaseDC(None, screen_dc);
 
             // Convert BGRA to RGBA
@@ -2273,8 +2317,76 @@ async fn open_screenshots_folder() -> Result<(), String> {
 
 fn main() {
     tauri::Builder::default()
+        .register_asynchronous_uri_scheme_protocol("localfile", |_ctx, request, responder| {
+            std::thread::spawn(move || {
+                let uri = request.uri();
+                let path_str = uri.path();
+
+                // URL decode the path
+                let decoded = urlencoding::decode(path_str).unwrap_or_else(|_| path_str.into());
+
+                // Strip query string if present (e.g., ?t=123456 cache buster)
+                let path_without_query = decoded.split('?').next().unwrap_or(&decoded);
+
+                // Normalize the path based on platform
+                let file_path = if cfg!(windows) {
+                    // On Windows, the path comes as /C:/Users/... so we need to strip the leading /
+                    if path_without_query.starts_with('/') && path_without_query.chars().nth(2) == Some(':') {
+                        path_without_query[1..].to_string()
+                    } else {
+                        path_without_query.to_string()
+                    }
+                } else {
+                    // On Unix (macOS/Linux), collapse any double slashes at the start
+                    // Path might come as //Users/... due to URL structure + absolute path
+                    if path_without_query.starts_with("//") {
+                        path_without_query[1..].to_string()
+                    } else {
+                        path_without_query.to_string()
+                    }
+                };
+
+                match std::fs::read(&file_path) {
+                    Ok(content) => {
+                        let mime = mime_guess::from_path(&file_path)
+                            .first_or_octet_stream()
+                            .to_string();
+
+                        let response = Response::builder()
+                            .header("Content-Type", &mime)
+                            .header("Access-Control-Allow-Origin", "*")
+                            .body(content)
+                            .unwrap();
+
+                        responder.respond(response);
+                    }
+                    Err(e) => {
+                        error!("[localfile] Failed to read file {}: {}", file_path, e);
+                        let response = Response::builder()
+                            .status(404)
+                            .header("Content-Type", "text/plain")
+                            .body(format!("File not found: {}", e).into_bytes())
+                            .unwrap();
+                        responder.respond(response);
+                    }
+                }
+            });
+        })
         .manage(AppState::default())
         .setup(|app| {
+            // Log startup information
+            info!("=== OTO Desktop Starting ===");
+            if let Ok(models_dir) = get_models_dir() {
+                info!("[startup] Models directory: {:?}", models_dir);
+                info!("[startup] Models directory exists: {}", models_dir.exists());
+            }
+            if let Ok(config) = load_model_config() {
+                info!(
+                    "[startup] Current model config - folder: {}, model_file: {}",
+                    config.folder, config.model_file
+                );
+            }
+
             // Create tray menu
             let toggle_item =
                 MenuItem::with_id(app, "toggle", "Show Character", true, None::<&str>)?;
@@ -2324,7 +2436,7 @@ fn main() {
                         }
                         "clear_data" => {
                             if let Err(e) = clear_app_data() {
-                                eprintln!("Error clearing app data: {}", e);
+                                error!("Error clearing app data: {}", e);
                             }
                         }
                         "quit" => {
@@ -2368,6 +2480,17 @@ fn main() {
             }
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .target(tauri_plugin_log::Target::new(
+                    tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("oto.log".into()),
+                    },
+                ))
+                .level(log::LevelFilter::Info)
+                .build(),
+        )
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
@@ -2445,6 +2568,7 @@ fn main() {
             clear_hitbox,
             save_transform_config,
             load_transform_config,
+            log_from_frontend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1647,6 +1647,17 @@
         const { invoke } = window.__TAURI__.core;
         const { listen, emit } = window.__TAURI__.event;
 
+        // Frontend logging helper - logs to both console and Rust log file
+        async function frontendLog(level, ...args) {
+            const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+            console[level](message);
+            try {
+                await invoke('log_from_frontend', { level, message });
+            } catch (e) {
+                // Ignore if command not available
+            }
+        }
+
         // Theme toggle functionality
         const themeToggle = document.getElementById('themeToggle');
         const savedTheme = localStorage.getItem('theme') || 'dark';
@@ -1918,9 +1929,23 @@
                 characterToggleBtn.disabled = false;
                 showToast('API key saved', 'success');
 
-                setTimeout(async () => {
-                    await invoke('hide_main_window');
-                }, 800);
+                // Ensure model is downloaded before showing overlay
+                frontendLog('info', '[Settings] Checking if model is initialized...');
+                const initialized = await invoke('is_initialized');
+                frontendLog('info', '[Settings] is_initialized returned:', initialized);
+                if (!initialized) {
+                    frontendLog('info', '[Settings] Model not initialized, calling init_app...');
+                    showToast('Downloading model...', 'info');
+                    await invoke('init_app');
+                    frontendLog('info', '[Settings] init_app completed');
+                }
+
+                // Show overlay and trigger model load
+                frontendLog('info', '[Settings] Emitting init-complete and showing overlay');
+                await emit('init-complete', {});
+                await invoke('show_overlay');
+                isOverlayVisible = true;
+                updateSpawnButton();
             } catch (err) {
                 showToast('Failed to save key: ' + err, 'error');
             }
@@ -1981,6 +2006,11 @@
                     folderSource.style.display = 'block';
                 } else {
                     modelUrlInput.value = config.url;
+                    // Ensure URL tab is active and folder source is hidden
+                    modelTabs.forEach(t => t.classList.remove('active'));
+                    document.querySelector('.model-tab[data-source="url"]').classList.add('active');
+                    urlSource.style.display = 'block';
+                    folderSource.style.display = 'none';
                 }
                 currentModelName.textContent = config.folder;
             } catch (err) {
@@ -2307,17 +2337,22 @@
                 loadVersions();
 
                 // Check if initialized
+                frontendLog('info', '[Init] Checking is_initialized...');
                 const initialized = await invoke('is_initialized');
+                frontendLog('info', '[Init] is_initialized:', initialized, 'hasApiKey:', hasApiKey);
 
                 if (!initialized) {
                     setStatus('first time setup', true);
                     showToast('Setting up...', 'info');
+                    frontendLog('info', '[Init] Calling init_app to download model...');
                     await invoke('init_app');
+                    frontendLog('info', '[Init] init_app completed');
                 }
 
                 // Check screen permission
                 setStatus('checking permissions', true);
                 const hasPermission = await invoke('check_screen_permission');
+                frontendLog('info', '[Init] Screen permission:', hasPermission);
 
                 if (!hasPermission) {
                     setStatus('permission required');
@@ -2335,6 +2370,7 @@
                 characterToggleBtn.disabled = !hasApiKey;
 
                 if (hasApiKey) {
+                    frontendLog('info', '[Init] Has API key, emitting init-complete and showing overlay');
                     await emit('init-complete', {});
                     await invoke('show_overlay');
                     isOverlayVisible = true;
