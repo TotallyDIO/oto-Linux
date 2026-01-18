@@ -620,7 +620,7 @@
 
     <script type="module">
         const { Live2DModel } = PIXI.live2d;
-        const { invoke } = window.__TAURI__.core;
+        const { invoke, convertFileSrc } = window.__TAURI__.core;
         const { listen } = window.__TAURI__.event;
         const { getCurrentWindow } = window.__TAURI__.window;
 
@@ -635,9 +635,10 @@
             }
         }
 
-        // Platform detection for keyboard shortcut tooltips
+        // Platform detection for keyboard shortcut tooltips and asset URL routing
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const isLinux = navigator.platform.toUpperCase().indexOf('LINUX') >= 0;
+        const isWindows = !isMac && !isLinux;
 
         function updateTooltips() {
             const modKey = isMac ? '⌥' : (isLinux ? 'Super' : 'Alt');
@@ -651,13 +652,17 @@
         // Global cache buster - updated on each model reload to force fresh texture loading
         window.textureCacheBuster = Date.now();
 
-        // Convert file path to localfile:// URL (bypasses broken asset protocol on Windows)
-        function toLocalFileUrl(filePath) {
-            // Normalize to forward slashes
+        // Platform-aware asset URL resolution
+        // Windows: use custom localfile:// protocol (Tauri's convertFileSrc is broken)
+        // Mac/Linux: use Tauri's built-in convertFileSrc (works correctly)
+        function getAssetUrl(filePath) {
             const normalized = filePath.replace(/\\/g, '/');
-            // Encode the path components but keep slashes
-            const encoded = normalized.split('/').map(part => encodeURIComponent(part)).join('/');
-            return `http://localfile.localhost/${encoded}`;
+            if (isWindows) {
+                const encoded = normalized.split('/').map(part => encodeURIComponent(part)).join('/');
+                return `http://localfile.localhost/${encoded}`;
+            } else {
+                return convertFileSrc(normalized);
+            }
         }
 
         // ============ Constants ============
@@ -697,6 +702,17 @@
             for (const prefix of assetPrefixes) {
                 if (url.startsWith(prefix)) {
                     const pathname = url.replace(prefix, '');
+
+                    // Skip if already properly encoded (from convertFileSrc on Mac)
+                    // Encoded absolute paths start with %2F (encoded /) or drive letter like C%3A
+                    if (pathname.startsWith('%2F') || /^[A-Za-z]%3A/.test(pathname)) {
+                        // Already a properly formed URL, just ensure cache buster
+                        if (!url.includes('?t=')) {
+                            return url + '?t=' + window.textureCacheBuster;
+                        }
+                        return url;
+                    }
+
                     const decoded = decodeURIComponent(pathname);
 
                     // Check if already an absolute path (Unix / or Windows C:/)
@@ -704,12 +720,12 @@
 
                     if (!isAbsolutePath) {
                         // Relative path - prepend base path and use localfile protocol
-                        const resolved = toLocalFileUrl(`${currentBasePath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                        const resolved = getAssetUrl(`${currentBasePath}/${decoded}`) + '?t=' + window.textureCacheBuster;
                         frontendLog('info', '[AssetResolve] Resolved relative:', decoded, '-> with base:', currentBasePath);
                         return resolved;
                     }
                     // Already absolute - convert to localfile URL
-                    const resolved = toLocalFileUrl(decoded) + '?t=' + window.textureCacheBuster;
+                    const resolved = getAssetUrl(decoded) + '?t=' + window.textureCacheBuster;
                     frontendLog('info', '[AssetResolve] Already absolute path:', decoded.substring(0, 50));
                     return resolved;
                 }
@@ -721,7 +737,7 @@
                 const decoded = decodeURIComponent(pathname);
                 const parentPath = currentBasePath.substring(0, currentBasePath.lastIndexOf('/'));
                 // Add cache-busting to prevent texture caching
-                const resolved = toLocalFileUrl(`${parentPath}/${decoded}`) + '?t=' + window.textureCacheBuster;
+                const resolved = getAssetUrl(`${parentPath}/${decoded}`) + '?t=' + window.textureCacheBuster;
                 frontendLog('info', '[AssetResolve] Resolved bare asset:', decoded, '-> parent:', parentPath);
                 return resolved;
             }
@@ -845,7 +861,7 @@
                     frontendLog('info', '[Live2D] Full path before URL conversion:', fullPath);
 
                     // Use custom localfile:// protocol (bypasses broken asset protocol on Windows)
-                    const modelUrl = toLocalFileUrl(fullPath) + '?t=' + window.textureCacheBuster;
+                    const modelUrl = getAssetUrl(fullPath) + '?t=' + window.textureCacheBuster;
 
                     frontendLog('info', '[Live2D] Model URL after conversion:', modelUrl);
 

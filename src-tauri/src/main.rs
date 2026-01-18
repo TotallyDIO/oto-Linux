@@ -23,7 +23,8 @@ use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder};
 use tauri::{command, AppHandle, Emitter, Manager};
-use tauri::http::{Request, Response};
+#[cfg(target_os = "windows")]
+use tauri::http::Response;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 // rusqlite is now used in db.rs module
 use log::{error, info, warn};
@@ -2316,62 +2317,65 @@ async fn open_screenshots_folder() -> Result<(), String> {
 // ============ Main ============
 
 fn main() {
-    tauri::Builder::default()
-        .register_asynchronous_uri_scheme_protocol("localfile", |_ctx, request, responder| {
-            std::thread::spawn(move || {
-                let uri = request.uri();
-                let path_str = uri.path();
+    #[allow(unused_mut)]
+    let mut builder = tauri::Builder::default();
 
-                // URL decode the path
-                let decoded = urlencoding::decode(path_str).unwrap_or_else(|_| path_str.into());
+    // Only register localfile:// protocol on Windows where Tauri's convertFileSrc is broken
+    #[cfg(target_os = "windows")]
+    {
+        builder = builder.register_asynchronous_uri_scheme_protocol(
+            "localfile",
+            |_ctx, request, responder| {
+                std::thread::spawn(move || {
+                    let uri = request.uri();
+                    let path_str = uri.path();
 
-                // Strip query string if present (e.g., ?t=123456 cache buster)
-                let path_without_query = decoded.split('?').next().unwrap_or(&decoded);
+                    // URL decode the path
+                    let decoded =
+                        urlencoding::decode(path_str).unwrap_or_else(|_| path_str.into());
 
-                // Normalize the path based on platform
-                let file_path = if cfg!(windows) {
+                    // Strip query string if present (e.g., ?t=123456 cache buster)
+                    let path_without_query = decoded.split('?').next().unwrap_or(&decoded);
+
                     // On Windows, the path comes as /C:/Users/... so we need to strip the leading /
-                    if path_without_query.starts_with('/') && path_without_query.chars().nth(2) == Some(':') {
+                    let file_path = if path_without_query.starts_with('/')
+                        && path_without_query.chars().nth(2) == Some(':')
+                    {
                         path_without_query[1..].to_string()
                     } else {
                         path_without_query.to_string()
-                    }
-                } else {
-                    // On Unix (macOS/Linux), collapse any double slashes at the start
-                    // Path might come as //Users/... due to URL structure + absolute path
-                    if path_without_query.starts_with("//") {
-                        path_without_query[1..].to_string()
-                    } else {
-                        path_without_query.to_string()
-                    }
-                };
+                    };
 
-                match std::fs::read(&file_path) {
-                    Ok(content) => {
-                        let mime = mime_guess::from_path(&file_path)
-                            .first_or_octet_stream()
-                            .to_string();
+                    match std::fs::read(&file_path) {
+                        Ok(content) => {
+                            let mime = mime_guess::from_path(&file_path)
+                                .first_or_octet_stream()
+                                .to_string();
 
-                        let response = Response::builder()
-                            .header("Content-Type", &mime)
-                            .header("Access-Control-Allow-Origin", "*")
-                            .body(content)
-                            .unwrap();
+                            let response = Response::builder()
+                                .header("Content-Type", &mime)
+                                .header("Access-Control-Allow-Origin", "*")
+                                .body(content)
+                                .unwrap();
 
-                        responder.respond(response);
+                            responder.respond(response);
+                        }
+                        Err(e) => {
+                            error!("[localfile] Failed to read file {}: {}", file_path, e);
+                            let response = Response::builder()
+                                .status(404)
+                                .header("Content-Type", "text/plain")
+                                .body(format!("File not found: {}", e).into_bytes())
+                                .unwrap();
+                            responder.respond(response);
+                        }
                     }
-                    Err(e) => {
-                        error!("[localfile] Failed to read file {}: {}", file_path, e);
-                        let response = Response::builder()
-                            .status(404)
-                            .header("Content-Type", "text/plain")
-                            .body(format!("File not found: {}", e).into_bytes())
-                            .unwrap();
-                        responder.respond(response);
-                    }
-                }
-            });
-        })
+                });
+            },
+        );
+    }
+
+    builder
         .manage(AppState::default())
         .setup(|app| {
             // Log startup information

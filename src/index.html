@@ -1644,8 +1644,26 @@
     </div>
 
     <script>
-        const { invoke } = window.__TAURI__.core;
+        const { invoke, convertFileSrc } = window.__TAURI__.core;
         const { listen, emit } = window.__TAURI__.event;
+
+        // Platform detection for asset URL routing
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const isLinux = navigator.platform.toUpperCase().indexOf('LINUX') >= 0;
+        const isWindows = !isMac && !isLinux;
+
+        // Platform-aware asset URL resolution
+        // Windows: use custom localfile:// protocol (Tauri's convertFileSrc is broken)
+        // Mac/Linux: use Tauri's built-in convertFileSrc (works correctly)
+        function getAssetUrl(filePath) {
+            const normalized = filePath.replace(/\\/g, '/');
+            if (isWindows) {
+                const encoded = normalized.split('/').map(part => encodeURIComponent(part)).join('/');
+                return `http://localfile.localhost/${encoded}`;
+            } else {
+                return convertFileSrc(normalized);
+            }
+        }
 
         // Frontend logging helper - logs to both console and Rust log file
         async function frontendLog(level, ...args) {
@@ -1734,7 +1752,6 @@
         });
 
         // Hide permissions step on non-Mac platforms
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const permissionsStep = document.getElementById('permissionsStep');
         if (permissionsStep && !isMac) {
             permissionsStep.style.display = 'none';
@@ -1784,7 +1801,6 @@
         async function loadTexturePreview() {
             try {
                 const paths = await invoke('get_texture_paths');
-                const { convertFileSrc } = window.__TAURI__.core;
 
                 // Check if texture editing is enabled for this model
                 if (!paths.texture_enabled) {
@@ -1798,16 +1814,16 @@
 
                     // Use first two textures (matching original UI layout)
                     if (paths.original_textures[0]) {
-                        originalTexture00.src = convertFileSrc(paths.original_textures[0]) + '?t=' + timestamp;
+                        originalTexture00.src = getAssetUrl(paths.original_textures[0]) + '?t=' + timestamp;
                     }
                     if (paths.current_textures[0]) {
-                        currentTexture00.src = convertFileSrc(paths.current_textures[0]) + '?t=' + timestamp;
+                        currentTexture00.src = getAssetUrl(paths.current_textures[0]) + '?t=' + timestamp;
                     }
                     if (paths.original_textures[1]) {
-                        originalTexture01.src = convertFileSrc(paths.original_textures[1]) + '?t=' + timestamp;
+                        originalTexture01.src = getAssetUrl(paths.original_textures[1]) + '?t=' + timestamp;
                     }
                     if (paths.current_textures[1]) {
-                        currentTexture01.src = convertFileSrc(paths.current_textures[1]) + '?t=' + timestamp;
+                        currentTexture01.src = getAssetUrl(paths.current_textures[1]) + '?t=' + timestamp;
                     }
 
                     texturePreview.style.display = 'flex';
