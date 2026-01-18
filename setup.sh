@@ -106,8 +106,19 @@ for dep in "${MISSING[@]}"; do
                     libxinerama-dev libxcursor-dev libxi-dev libxext-dev \
                     libatk1.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
                     libjavascriptcoregtk-4.1-dev libsoup-3.0-dev libglib2.0-dev \
-                    libayatana-appindicator3-dev libayatana-appindicator3-1 \
-                    gnome-screenshot
+                    libayatana-appindicator3-dev gnome-screenshot
+                elif command -v dnf &>/dev/null; then
+                    sudo dnf install -y \
+                    pkgconf-pkg-config openssl-devel libX11-devel libXrandr-devel \
+                    libXinerama-devel libXcursor-devel libXi-devel libXext-devel \
+                    atk-devel gtk3-devel webkit2gtk3-devel \
+                    javascriptcoregtk3-devel libsoup3-devel glib2-devel \
+                    libayatana-appindicator3-devel gnome-screenshot
+                elif
+                    err "Unsupported Linux package manager. Please install dependencies manually."
+                fi
+
+
             fi ;;
     esac
 done
